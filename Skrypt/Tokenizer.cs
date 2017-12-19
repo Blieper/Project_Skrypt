@@ -7,7 +7,7 @@ using Evaluation;
 namespace Tokenisation
 {
 
-    class Token
+    public class Token
     {
         public TokenType type;
         public string value;
@@ -54,7 +54,7 @@ namespace Tokenisation
         None,
     }
 
-    enum TokenType : byte {
+    public enum TokenType : byte {
         Punctuator,
         Identifier,
         String,       
@@ -155,9 +155,9 @@ namespace Tokenisation
                 case "=<":
                     return "issmaller";    
                 case "(":
-                    return "lparenthesis";
+                    return "lpar";
                 case ")":
-                    return "rparenthesis";  
+                    return "rpar";  
                 case "{":
                     return "lbracket";  
                 case "}":   
@@ -359,12 +359,19 @@ namespace Tokenisation
                             break;
                         }
 
-                        // Is it part of a number?
-                        if ((getNumberType(Chunk) != NumberType.None) || (separator == "-" && getNumberType("" + value[pos + 1]) != NumberType.None))
+                        // Is it part of a positive number?
+                        if ((getNumberType(Chunk) != NumberType.None))
                         {
                             foundNumber = true;
                             break;
                         }
+
+                        // Is it part of a negative number?
+                        if (Chunk.Length == 1 && separator == "-" && (getNumberType("" + value[pos + 1]) != NumberType.None))
+                        {
+                            foundNumber = true;
+                            break;                            
+                        } 
 
                         // add the section of string before the separator 
                         // (unless its empty and we are discarding empty sections)
@@ -407,9 +414,9 @@ namespace Tokenisation
             return splitValues;
         }
 
-        private void addToken(TokenType type, string value, int l, int c)
+        private Token addToken(TokenType type, string value, int l, int c)
         {
-            if (String.IsNullOrWhiteSpace(value)) { return; }
+            if (String.IsNullOrWhiteSpace(value)) { return new Token(TokenType.None,String.Empty,0,0); }
 
             // Pre-calculate numbers
             if (getNumberType(value) != NumberType.None)
@@ -423,10 +430,22 @@ namespace Tokenisation
                 value = processPunctuator(value);
             }
 
-            tokensList.Add(new Token(type, value, l , c));
+            Token token = new Token(type, value, l , c);
+
+            tokensList.Add(token);
+
+            return token;
         }
 
         public TokenType getTokenType (string value) {
+  
+            if (stringRegex.IsMatch(value)) {
+                return TokenType.String;
+            }
+
+            if (getNumberType(value) != NumberType.None) {
+                return TokenType.Numeric;
+            }      
 
             if (punctuatorRegex.IsMatch(value)) {
                 return TokenType.Punctuator;
@@ -434,10 +453,6 @@ namespace Tokenisation
 
             if (booleanRegex.IsMatch(value)) {
                 return TokenType.Boolean;
-            }
-  
-            if (stringRegex.IsMatch(value)) {
-                return TokenType.String;
             }   
 
             if (keywordRegex.IsMatch(value)) {
@@ -446,11 +461,7 @@ namespace Tokenisation
 
             if (identifierRegex.IsMatch(value)) {
                 return TokenType.Identifier;
-            }
-
-            if (getNumberType(value) != NumberType.None) {
-                return TokenType.Numeric;
-            }         
+            }  
 
             return TokenType.None;
         }
@@ -461,6 +472,8 @@ namespace Tokenisation
 
             List<CodeChunk> splitArray = splitCode(Code);
 
+            Token previous = new Token(TokenType.None,String.Empty,0,0);
+
             foreach (CodeChunk bit in splitArray)
             {                   
                 if (commentRegex.IsMatch(bit.chunk)) {
@@ -468,7 +481,19 @@ namespace Tokenisation
                 }    
 
                 TokenType Type = getTokenType (bit.chunk);
-                addToken(Type, bit.chunk, bit.line, bit.col);
+
+                if (previous.type == TokenType.Identifier || previous.type ==  TokenType.Numeric) {
+                    if (Type == TokenType.Numeric) {
+                        if (bit.chunk[0] == '-') {
+                            addToken(TokenType.Punctuator, "-", bit.line, bit.col);
+                            addToken(Type, bit.chunk.Substring(1), bit.line, bit.col + 1); 
+
+                            continue;                       
+                        }
+                    }
+                }
+
+                previous = addToken(Type, bit.chunk, bit.line, bit.col);
             }
 
             watch.Stop();

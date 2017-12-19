@@ -3,6 +3,7 @@ using System.IO;
 using System.Collections.Generic;
 using Evaluation;
 using Tokenisation;
+using Parsing;
 
 namespace Skrypt
 {
@@ -11,11 +12,11 @@ namespace Skrypt
         static Tokenizer tokenizer = new Tokenizer();
         static List<Token> tokens;
 
-        static bool printTokens = true;
+        static bool printTokens = false;
 
         static void Main(string[] args)
         {
-            string filePath = @"D:\GitHub\Project_Skrypt\code.skrypt";
+            string filePath = @"E:\GitHub\Project_Skrypt\code.skrypt";
             StreamReader sr = new StreamReader(filePath);
             string code = sr.ReadToEnd();
             sr.Close();
@@ -23,6 +24,18 @@ namespace Skrypt
             code = code.Replace('\0', ' ');
 
             tokens = tokenizer.GetTokens(code);
+
+            parser.ParseTokens(tokens);
+
+            node program = new node{body="program"};
+
+            // program.left = new node{body="assign"};
+            // program.left.left = new node{body="add"};
+            // program.left.left.left = new node{body="1"};  
+            // program.left.left.right = new node{body="2"};                        
+            // program.left.right = new node{body="d"};
+
+            //Console.WriteLine(program);
 
             if (printTokens)
             {
@@ -73,6 +86,8 @@ namespace Skrypt
                     Console.ResetColor();
                 }
             }
+
+            return;
         }
     }
 }

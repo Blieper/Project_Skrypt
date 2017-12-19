@@ -38,3 +38,13 @@ d:\GitHub\Project_Skrypt\Skrypt\obj\Debug\netcoreapp2.0\Skrypt.AssemblyInfoInput
 d:\GitHub\Project_Skrypt\Skrypt\obj\Debug\netcoreapp2.0\Skrypt.AssemblyInfo.cs
 d:\GitHub\Project_Skrypt\Skrypt\obj\Debug\netcoreapp2.0\Skrypt.dll
 d:\GitHub\Project_Skrypt\Skrypt\obj\Debug\netcoreapp2.0\Skrypt.pdb
+E:\GitHub\Project_Skrypt\Skrypt\bin\Debug\netcoreapp2.0\Skrypt.deps.json
+E:\GitHub\Project_Skrypt\Skrypt\bin\Debug\netcoreapp2.0\Skrypt.runtimeconfig.json
+E:\GitHub\Project_Skrypt\Skrypt\bin\Debug\netcoreapp2.0\Skrypt.runtimeconfig.dev.json
+E:\GitHub\Project_Skrypt\Skrypt\bin\Debug\netcoreapp2.0\Skrypt.dll
+E:\GitHub\Project_Skrypt\Skrypt\bin\Debug\netcoreapp2.0\Skrypt.pdb
+E:\GitHub\Project_Skrypt\Skrypt\obj\Debug\netcoreapp2.0\Skrypt.csproj.CoreCompileInputs.cache
+E:\GitHub\Project_Skrypt\Skrypt\obj\Debug\netcoreapp2.0\Skrypt.AssemblyInfoInputs.cache
+E:\GitHub\Project_Skrypt\Skrypt\obj\Debug\netcoreapp2.0\Skrypt.AssemblyInfo.cs
+E:\GitHub\Project_Skrypt\Skrypt\obj\Debug\netcoreapp2.0\Skrypt.dll
+E:\GitHub\Project_Skrypt\Skrypt\obj\Debug\netcoreapp2.0\Skrypt.pdb
