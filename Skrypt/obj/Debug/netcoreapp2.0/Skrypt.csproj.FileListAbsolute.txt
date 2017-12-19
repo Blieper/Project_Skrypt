@@ -28,3 +28,13 @@ e:\Google Drive\CSharp\Skrypt_Project\Skrypt\obj\Debug\netcoreapp2.0\Skrypt.Asse
 e:\Google Drive\CSharp\Skrypt_Project\Skrypt\obj\Debug\netcoreapp2.0\Skrypt.AssemblyInfo.cs
 e:\Google Drive\CSharp\Skrypt_Project\Skrypt\obj\Debug\netcoreapp2.0\Skrypt.dll
 e:\Google Drive\CSharp\Skrypt_Project\Skrypt\obj\Debug\netcoreapp2.0\Skrypt.pdb
+d:\GitHub\Project_Skrypt\Skrypt\bin\Debug\netcoreapp2.0\Skrypt.deps.json
+d:\GitHub\Project_Skrypt\Skrypt\bin\Debug\netcoreapp2.0\Skrypt.runtimeconfig.json
+d:\GitHub\Project_Skrypt\Skrypt\bin\Debug\netcoreapp2.0\Skrypt.runtimeconfig.dev.json
+d:\GitHub\Project_Skrypt\Skrypt\bin\Debug\netcoreapp2.0\Skrypt.dll
+d:\GitHub\Project_Skrypt\Skrypt\bin\Debug\netcoreapp2.0\Skrypt.pdb
+d:\GitHub\Project_Skrypt\Skrypt\obj\Debug\netcoreapp2.0\Skrypt.csproj.CoreCompileInputs.cache
+d:\GitHub\Project_Skrypt\Skrypt\obj\Debug\netcoreapp2.0\Skrypt.AssemblyInfoInputs.cache
+d:\GitHub\Project_Skrypt\Skrypt\obj\Debug\netcoreapp2.0\Skrypt.AssemblyInfo.cs
+d:\GitHub\Project_Skrypt\Skrypt\obj\Debug\netcoreapp2.0\Skrypt.dll
+d:\GitHub\Project_Skrypt\Skrypt\obj\Debug\netcoreapp2.0\Skrypt.pdb
