@@ -15,7 +15,7 @@ namespace Skrypt
 
         static void Main(string[] args)
         {
-            string filePath = @"E:\Google Drive\CSharp\Skrypt_Project\code.skrypt";
+            string filePath = @"D:\GitHub\Project_Skrypt\code.skrypt";
             StreamReader sr = new StreamReader(filePath);
             string code = sr.ReadToEnd();
             sr.Close();
