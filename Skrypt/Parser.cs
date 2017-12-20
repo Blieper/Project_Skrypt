@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Globalization;
-using Evaluation;
 using Tokenisation;
 
 namespace Parsing
@@ -16,10 +15,10 @@ namespace Parsing
         public override string ToString() {
 
             int fb = depth > 0 ? depth+1: depth;
-            string str = new String('.', fb) + body;
+            string str = new String(' ', fb) + body;
 
             foreach (node Node in nodes) {
-                str += "\n" + new String('.', depth) + Node.ToString();
+                str += "\n" + new String(' ', depth) + Node.ToString();
             }
 
             //if (nodes.Count > 0)
@@ -49,6 +48,19 @@ namespace Parsing
             return debug;
         }
 
+        static public bool isOperator (string value) {
+            switch (value) {
+                case "add":
+                case "sub":
+                case "mul":
+                case "div":
+                case "assign":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
         static public node ParseExpression (node branch, List<Token> expression) {
             List<Token> leftBuffer  = new List<Token>();
             List<Token> rightBuffer = new List<Token>();;
@@ -58,7 +70,7 @@ namespace Parsing
             while (i < expression.Count - 1) {
                 Token token = expression[i];
 
-                if (token.type == TokenType.Punctuator) {
+                if (((token.type == TokenType.Punctuator) && isOperator(token.value)) || token.type == TokenType.Keyword) {
                     node newNode = new node();
                     newNode.depth = branch.depth + 1;
                     newNode.body = token.value;
@@ -82,6 +94,12 @@ namespace Parsing
                 }
 
                 i++;
+            }
+
+            if (expression[0].value == "lpar" && expression[expression.Count - 1].value == "rpar") {
+                Console.WriteLine(stringList(expression));
+                expression = expression.GetRange(1,expression.Count - 2);
+                Console.WriteLine(stringList(expression));
             }
 
             return new node () {body = expression[0].value, depth = branch.depth + 1};

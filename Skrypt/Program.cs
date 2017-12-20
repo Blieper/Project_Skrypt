@@ -12,7 +12,7 @@ namespace Skrypt
         static Tokenizer tokenizer = new Tokenizer();
         static List<Token> tokens;
 
-        static bool printTokens = false;
+        static bool printTokens = true;
 
         static void Main(string[] args)
         {

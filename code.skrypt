@@ -1,1 +1,3 @@
-print."wdwdwdwdw";
+if (1) {
+    return "aah";
+}

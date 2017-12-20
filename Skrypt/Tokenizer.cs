@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Globalization;
-using Evaluation;
 
 namespace Tokenisation
 {
@@ -129,7 +128,7 @@ namespace Tokenisation
         {
             switch (Punctuator) {
                 case "=":
-                    return "assign";
+                    return "assign";  
                 case ";":
                     return "eol";  
                 case ".":
@@ -153,7 +152,7 @@ namespace Tokenisation
                 case "=>":
                     return "isgreater";     
                 case "=<":
-                    return "issmaller";    
+                    return "issmaller";  
                 case "(":
                     return "lpar";
                 case ")":
@@ -209,6 +208,7 @@ namespace Tokenisation
             "}",    // right curly bracket 
             "[",    // left array accessor 
             "]",    // right array accessor
+            "==",
             "=<",   // is or is smaller than
             "=>",   // is or is greater than  
             ">>>",  // bit shift right zero fill             
