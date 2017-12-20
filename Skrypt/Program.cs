@@ -27,7 +27,7 @@ namespace Skrypt
 
             parser.ParseTokens(tokens);
 
-            node program = new node{body="program"};
+            //node program = new node{body="program"};
 
             // program.left = new node{body="assign"};
             // program.left.left = new node{body="add"};

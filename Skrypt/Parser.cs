@@ -48,58 +48,68 @@ namespace Parsing
             return debug;
         }
 
-        static public bool isOperator (string value) {
-            switch (value) {
-                case "add":
-                case "sub":
-                case "mul":
-                case "div":
-                case "assign":
-                    return true;
-                default:
-                    return false;
-            }
-        }
 
         static public node ParseExpression (node branch, List<Token> expression) {
             List<Token> leftBuffer  = new List<Token>();
             List<Token> rightBuffer = new List<Token>();;
 
-            int i = 1;
+            int i = -1;
+            bool isPar = false;
+
+            Console.WriteLine(stringList(expression));
 
             while (i < expression.Count - 1) {
+                i++;
+
                 Token token = expression[i];
 
-                if (((token.type == TokenType.Punctuator) && isOperator(token.value)) || token.type == TokenType.Keyword) {
-                    node newNode = new node();
-                    newNode.depth = branch.depth + 1;
-                    newNode.body = token.value;
-
-                    branch.nodes.Add(newNode);
-
-                    if (i > 0) {
-                        leftBuffer  = expression.GetRange(0,i);
-                        newNode.nodes.Add(ParseExpression (newNode, leftBuffer));
-                    }
-
-                    if (i + 0 < expression.Count) {
-                        rightBuffer = expression.GetRange(i + 1,expression.Count - i - 1);            
-                        newNode.nodes.Add(ParseExpression (newNode, rightBuffer));
-                    }  
-
-                    if (newNode.nodes.Count > 2) 
-                        newNode.nodes.RemoveAt(newNode.nodes.Count - 1);
-
-                    break; 
+                Console.WriteLine(token);
+                
+                if (token.value == "lpar") {
+                    isPar = true; 
+                    Console.WriteLine("Found lpar");
+                    continue;
                 }
 
-                i++;
+                if (isPar) {
+                    if (token.value == "rpar") {
+                        isPar = false; 
+                        Console.WriteLine("Found rpar");
+                    }
+
+                    Console.WriteLine("Skipping");
+                    continue;
+                } else {
+                    if (token.type == TokenType.Punctuator || token.type == TokenType.Keyword) {
+                        node newNode = new node();
+                        newNode.depth = branch.depth + 1;
+                        newNode.body = token.value;
+
+                        branch.nodes.Add(newNode);
+
+                        if (i > 0) {
+                            leftBuffer  = expression.GetRange(0,i);
+                            newNode.nodes.Add(ParseExpression (newNode, leftBuffer));
+                        }
+
+                        if (i < expression.Count) {
+                            rightBuffer = expression.GetRange(i + 1,expression.Count - i - 1);            
+                            newNode.nodes.Add(ParseExpression (newNode, rightBuffer));
+                        }  
+
+                        if (newNode.nodes.Count > 2) 
+                            newNode.nodes.RemoveAt(newNode.nodes.Count - 1);
+
+                        break; 
+                    }
+                }
             }
 
             if (expression[0].value == "lpar" && expression[expression.Count - 1].value == "rpar") {
-                Console.WriteLine(stringList(expression));
-                expression = expression.GetRange(1,expression.Count - 2);
-                Console.WriteLine(stringList(expression));
+                 expression = expression.GetRange(1,expression.Count - 2);
+                 Console.WriteLine("No par: " + stringList(expression));
+
+                 return ParseExpression (branch, expression);
             }
 
             return new node () {body = expression[0].value, depth = branch.depth + 1};
