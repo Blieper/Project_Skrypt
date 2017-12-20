@@ -11,6 +11,7 @@ namespace Parsing
 
         public List<node> nodes = new List<node>();
         public int depth = 0;
+        public bool isEmpty = false;
 
         public override string ToString() {
 
@@ -55,64 +56,80 @@ namespace Parsing
 
             int i = -1;
             bool isPar = false;
+            bool isSplit = false;
 
-            Console.WriteLine(stringList(expression));
+            Console.WriteLine(new String(' ', branch.depth * 3) + stringList(expression) + "");
 
             while (i < expression.Count - 1) {
                 i++;
 
                 Token token = expression[i];
 
-                Console.WriteLine(token);
-                
                 if (token.value == "lpar") {
                     isPar = true; 
-                    Console.WriteLine("Found lpar");
+                    Console.WriteLine(new String(' ', branch.depth * 3) + "-Found lpar");
                     continue;
                 }
 
                 if (isPar) {
                     if (token.value == "rpar") {
                         isPar = false; 
-                        Console.WriteLine("Found rpar");
+                        Console.WriteLine(new String(' ', branch.depth * 3) + "-Found rpar");
+                    }else{
+                        Console.WriteLine(new String(' ', branch.depth * 3) + "Skipping");
+                        continue;
                     }
-
-                    Console.WriteLine("Skipping");
-                    continue;
                 } else {
                     if (token.type == TokenType.Punctuator || token.type == TokenType.Keyword) {
                         node newNode = new node();
                         newNode.depth = branch.depth + 1;
                         newNode.body = token.value;
 
-                        branch.nodes.Add(newNode);
+                        Console.WriteLine(new String(' ', branch.depth * 3) + "Punc: " + newNode.body);
 
                         if (i > 0) {
                             leftBuffer  = expression.GetRange(0,i);
-                            newNode.nodes.Add(ParseExpression (newNode, leftBuffer));
+                            Console.WriteLine(new String(' ', branch.depth * 3) + "Left: " + stringList(leftBuffer));
+
+                            node addNode = ParseExpression (newNode, leftBuffer);
+
+                            if (addNode != null)
+                                newNode.nodes.Add(addNode);
                         }
 
-                        if (i < expression.Count) {
-                            rightBuffer = expression.GetRange(i + 1,expression.Count - i - 1);            
-                            newNode.nodes.Add(ParseExpression (newNode, rightBuffer));
+                        if (i < expression.Count-1) {
+                            rightBuffer = expression.GetRange(i + 1,expression.Count - i - 1);       
+                            Console.WriteLine(new String(' ', branch.depth * 3) + "Right: " + stringList(rightBuffer));
+                            
+                            node addNode = ParseExpression (newNode, rightBuffer);
+
+                            if (addNode != null) 
+                                newNode.nodes.Add(addNode);
                         }  
-
-                        if (newNode.nodes.Count > 2) 
-                            newNode.nodes.RemoveAt(newNode.nodes.Count - 1);
-
+                         
+                        if ((i < expression.Count-1) && i > 0)
+                            branch.nodes.Add(newNode);
+                        
+                        isSplit = true;
                         break; 
                     }
                 }
             }
 
-            if (expression[0].value == "lpar" && expression[expression.Count - 1].value == "rpar") {
+            if (!isSplit && expression[0].value == "lpar" && expression[expression.Count - 1].value == "rpar") {
                  expression = expression.GetRange(1,expression.Count - 2);
-                 Console.WriteLine("No par: " + stringList(expression));
+                 Console.WriteLine(new String(' ', branch.depth * 3) + "No par: " + stringList(expression));
 
                  return ParseExpression (branch, expression);
             }
 
-            return new node () {body = expression[0].value, depth = branch.depth + 1};
+            bool empty = expression.Count > 1;
+
+            if (expression.Count > 1) {
+                return null;
+            }
+
+            return new node () {body = expression[0].value, depth = branch.depth + 1, isEmpty = empty};
         }
 
         static public node ParseTokens (List<Token> tokensList) 

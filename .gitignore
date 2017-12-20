@@ -1,1 +1,6 @@
-.cache
+*.csproj
+*.sln
+*.pdb
+
+Skrypt/obj/*
+Skrypt/bin/*
