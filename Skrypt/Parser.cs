@@ -14,7 +14,9 @@ namespace Parsing
         public int depth = 0;
 
         public override string ToString() {
-            string str = new String('.', depth+1) + body;
+
+            int fb = depth > 0 ? depth+1: depth;
+            string str = new String('.', fb) + body;
 
             foreach (node Node in nodes) {
                 str += "\n" + new String('.', depth) + Node.ToString();
