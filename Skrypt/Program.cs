@@ -19,12 +19,9 @@ namespace Skrypt
 
         static void Main(string[] args)
         {
-<<<<<<< HEAD
             var watch = System.Diagnostics.Stopwatch.StartNew();
             string filePath = @"E:\GitHub\Project_Skrypt\code.skrypt";
-=======
-            string filePath = @"D:\GitHub\Project_Skrypt\code.skrypt";
->>>>>>> 20b93cd4dfa78bf4a37059f1788e3eb255afc8dd
+
             StreamReader sr = new StreamReader(filePath);
             string code = sr.ReadToEnd();
             sr.Close();
