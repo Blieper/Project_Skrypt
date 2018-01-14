@@ -6,3 +6,6 @@ Skrypt/obj/*
 Skrypt/bin/*
 *.pdb
 *.dll
+*.props
+*.cache
+*.pdb
