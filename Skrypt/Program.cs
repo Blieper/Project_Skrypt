@@ -14,22 +14,14 @@ namespace Skrypt
         static List<Token> tokens;
         static node program;
 
-<<<<<<< HEAD
-        static bool printTokens = true;
-
-        static void Main(string[] args)
-        {
-            string filePath = @"C:\Users\yoran\Google Drive\PWT\C#\Address\ips.txt";
-=======
         static bool printTokens = false;
         static bool printAST    = true;
 
         static void Main(string[] args)
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
-            string filePath = @"E:\GitHub\Project_Skrypt\code.skrypt";
+            string filePath = @"D:\GitHub\Project_Skrypt\code.skrypt";
 
->>>>>>> e6d62e25d64aef7a351b4c04d9a5ad9929d387a8
             StreamReader sr = new StreamReader(filePath);
             string code = sr.ReadToEnd();
             sr.Close();
