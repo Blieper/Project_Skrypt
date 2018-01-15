@@ -12,11 +12,11 @@ namespace Skrypt
         static Tokenizer tokenizer = new Tokenizer();
         static List<Token> tokens;
 
-        static bool printTokens = false;
+        static bool printTokens = true;
 
         static void Main(string[] args)
         {
-            string filePath = @"D:\GitHub\Project_Skrypt\code.skrypt";
+            string filePath = @"C:\Users\yoran\Google Drive\PWT\C#\Address\ips.txt";
             StreamReader sr = new StreamReader(filePath);
             string code = sr.ReadToEnd();
             sr.Close();
