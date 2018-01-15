@@ -75,7 +75,7 @@ namespace Tokenisation
         static Regex decimalRegex       = new Regex(@"-?\d+(\.\d*)?([eE][-+]?\d+)?", RegexOptions.IgnoreCase);
         static Regex hexadecimalRegex   = new Regex(@"0x([A-Fa-f\d])+");
         static Regex commentRegex       = new Regex(@"(?:[/]{2,}(.*))|((/\*)+[\s\S]*(\*/)+)");
-        static Regex punctuatorRegex    = new Regex(@"(&&)|(\|\|)|(\|\|\|)|(==)|(!=)|(=>)|(=<)|(<<)|(>>)|(>>>)|[=;<>+\-*/%^&|!\[\]\(\)\.\,{}]");
+        static Regex punctuatorRegex    = new Regex(@"(&&)|(\|\|)|(\|\|\|)|(==)|(!=)|(>=)|(<=)|(<<)|(>>)|(>>>)|[~=;<>+\-*/%^&|!\[\]\(\)\.\,{}]");
         static Regex identifierRegex    = new Regex(@"(?:[_a-z]+[_a-z0-9]*)");
         static Regex booleanRegex       = new Regex(@"(true|false)");
         static Regex keywordRegex       = new Regex(@"(if|else|class|this|new|null|public|private|protected|return|base|function|for|foreach|while|break|continue|switch|case|default|throw)");
@@ -149,9 +149,9 @@ namespace Tokenisation
                     return "smaller"; 
                 case ">":  
                     return "greater";                                  
-                case "=>":
+                case ">=":
                     return "isgreater";     
-                case "=<":
+                case "<=":
                     return "issmaller";  
                 case "(":
                     return "lpar";
@@ -209,8 +209,8 @@ namespace Tokenisation
             "[",    // left array accessor 
             "]",    // right array accessor
             "==",
-            "=<",   // is or is smaller than
-            "=>",   // is or is greater than  
+            "<=",   // is or is smaller than
+            ">=",   // is or is greater than  
             ">>>",  // bit shift right zero fill             
             ">>",   // bit shift right
             ">",    // is greater than        
@@ -498,11 +498,9 @@ namespace Tokenisation
 
             watch.Stop();
 
-            var elapsedMs = watch.ElapsedMilliseconds;
-
             Console.WriteLine("Tokens: {0}", splitArray.Count);
             Console.WriteLine("Lines: {0}", line);
-            Console.WriteLine("Time: {0} ms", elapsedMs);
+            Console.WriteLine("Tokenize time: {0} ms", watch.ElapsedMilliseconds);
 
             return tokensList;
         }

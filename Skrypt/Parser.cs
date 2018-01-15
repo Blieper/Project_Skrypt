@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Globalization;
 using Tokenisation;
+using SkryptLibraries;
 
 namespace Parsing
 {
@@ -33,10 +34,19 @@ namespace Parsing
                 str += "\n" + repStr("¦", depth+1) + Node.ToString();
             }
 
-            //if (nodes.Count > 0)
-                //str = str +  "\n" + new String(' ', Math.Clamp(depth*2-1,0,9999)) + "}";
-
             return str;
+        }
+    }
+
+    public class OperatorCategory {
+        public string[] operators;
+        public bool rightToLeft = false;
+        public byte count = 2;
+
+        public OperatorCategory (string[] ops, bool rtl = false, byte cnt = 2) {
+            operators = ops;
+            rightToLeft = rtl;
+            count = cnt;
         }
     }
 
@@ -46,6 +56,8 @@ namespace Parsing
     }
 
     static public class parser {
+
+        public static List<OperatorCategory> opPrecedence = new List<OperatorCategory>();
 
         static public bool IsPredefinedVariable (Token Identifier) {
             return true;
@@ -76,106 +88,234 @@ namespace Parsing
             return newString;
         }
 
-        static public node ParseExpression (node branch, List<Token> expression) {
+        public static string processPunctuator (string Punctuator) 
+        {
+            switch (Punctuator) {
+                case "=":
+                    return "assign";  
+                case ";":
+                    return "eol";  
+                case ".":
+                    return "access";  
+                case ",":
+                    return "seperate";                      
+                case "!":
+                    return "not";   
+                case "==":
+                    return "is";               
+                case "!=":
+                    return "isnot";     
+                case "&&":
+                    return "and";     
+                case "||":
+                    return "or";    
+                case "<":   
+                    return "smaller"; 
+                case ">":  
+                    return "greater";                                  
+                case ">=":
+                    return "isgreater";     
+                case "<=":
+                    return "issmaller";  
+                case "(":
+                    return "lpar";
+                case ")":
+                    return "rpar";  
+                case "{":
+                    return "lbracket";  
+                case "}":   
+                    return "rbracket";       
+                case "[":
+                    return "laccess";  
+                case "]":   
+                    return "raccess";                                   
+                case "+":
+                    return "add";
+                case "-":
+                    return "sub";  
+                case "*":
+                    return "mul";  
+                case "/":   
+                    return "div";         
+                case "%":
+                    return "mod";  
+                case "^":   
+                    return "pow";  
+                case "&":   
+                    return "band";  
+                case "|":   
+                    return "bor";  
+                case "|||":   
+                    return "bxor";                       
+                case "~":   
+                    return "bnot";         
+                case "<<":   
+                    return "bshl"; 
+                case ">>":   
+                    return "bshr"; 
+                case ">>>":   
+                    return "bsh0";                                                     
+                default:
+                    return "";
+            }
+        }
+
+        static public node ParseExpression (node branch, List<Token> expression, bool gotSplit = false) {
             List<Token>    leftBuffer   = new List<Token>();
             List<Token>    rightBuffer  = new List<Token>();
             List<Variable> variableList = new List<Variable>();
+            Library methods = new Library();
 
             int     i           = -1;
-            bool    isPar       = false;
-            int     rParCount   = 0;
-            bool    isSplit     = false;
+            int     opPC        = opPrecedence.Count;
 
-            Console.WriteLine(repStr("¦", branch.depth) + stringList(expression) + "");
+            for (int j = 0; j < opPC; j++) {
+                OperatorCategory Cat = opPrecedence[j];
+                bool rtl = Cat.rightToLeft;
+                byte cnt = Cat.count;
+                int k = rtl ? Cat.operators.Length - 1 : 0;
+                bool loop = true;
+                bool obrk = false;
 
-            while (i < expression.Count - 1) {
-                i++;
+                while (loop) {
 
-                Token token = expression[i];
+                    i = -1;
+                    bool brk = false;
+                            
+                    bool    isPar       = false;
+                    int     rParCount   = 0;
+                    int     parPairs    = 0;
+                    bool    surroundedPar = false;
+                    bool    firstIsPar  = false;
+                    bool    firstIsMethod = false;
+                    bool    methodPar   = false;
+                    bool    expressionIsMethod = false;
+                    Method  foundMethod = null;
 
-                // If a left parenthesis is found, increase rParCount so we can keep track of the current pair   
-                if (token.value == "lpar") {
-                    rParCount++;
-                    isPar = true; 
-                    Console.WriteLine(repStr("¦", branch.depth) +  "lpar: " + rParCount);
-                    continue;
-                }
+                    string op = processPunctuator(Cat.operators[k]);
 
-                if (isPar) {
+                    while (i < expression.Count - 1) {
+                        i++;
 
-                    // If a right parenthesis is found, decrease rParCount so we can keep track of the current pair     
-                    if (token.value == "rpar") {
-                        rParCount--;
+                        Token token = expression[i];
 
-                        Console.WriteLine(repStr("¦", branch.depth) + "rpar: " + rParCount);
-
-                        // If rParCount == 0, it means that we found the outer pair of parenthesis
-                        if (rParCount == 0) {
-                            isPar = false; 
-                            rParCount = 0;
+                        if (methods.Exists(token.value)) {
+                            if (i == 0) {
+                                firstIsMethod = true; 
+                                foundMethod = methods.Get(token.value);
+                            }
                         }
-                    }else{
-                        Console.WriteLine(repStr("¦", branch.depth) + "Skipping");
 
-                        // Skip until we find the outer pair of parenthesis
-                        continue;
-                    }
-                } else {
-                    if (token.type == TokenType.Punctuator || token.type == TokenType.Keyword) {
-                        // Create and add a new node for the branch and set its body/depth
-                        node newNode = new node();
-                        newNode.depth = branch.depth + 1;
-                        newNode.body = token.value;
+                        // If a left parenthesis is found, increase rParCount so we can keep track of the current pair   
+                        if (token.value == "lpar") {
+                            rParCount++;
+                            isPar = true; 
 
-                        Console.WriteLine(repStr("¦", branch.depth) + "Punc: " + newNode.body);
+                            if (i == 0) {
+                                firstIsPar = true; 
+                            } else if (i == 1 && firstIsMethod) {
+                                methodPar = true;
+                            }
+                        }
 
-                        // Only check for left tokens if there are any
-                        if (i > 0) {
+                        if (isPar) {
+                            // If a right parenthesis is found, decrease rParCount so we can keep track of the current pair     
+                            if (token.value == "rpar") {
+                                rParCount--;
+
+                                // If rParCount == 0, it means that we found a matching pair of parenthesis
+                                if (rParCount == 0) {
+                                    parPairs++;
+                                    isPar = false;
+
+                                    if (i == expression.Count - 1 && firstIsPar && parPairs == 1) {
+                                        surroundedPar = true;
+                                        break;
+                                    }
+
+                                    if (i == expression.Count - 1 && methodPar) {
+                                        expressionIsMethod = true;
+                                        break;
+                                    }
+
+                                    continue; 
+                                }
+                            }else{             
+                                // Skip until we find the matching right parenthesis
+                                continue;
+                            }
+                        } 
+
+                        if (op == token.value) {
+
+                            node newNode  = new node();
+                            node addNode;
+                            newNode.depth = branch.depth + 1;
+                            newNode.body  = token.value;
+
                             // All of the tokens on the left
                             leftBuffer  = expression.GetRange(0,i);
-                            Console.WriteLine(repStr("¦", branch.depth) + "Left: " + stringList(leftBuffer));
                             
                             // Parsing a node from the left buffer
-                            node addNode = ParseExpression (newNode, leftBuffer);
+                            if (cnt != 1) {
+                                addNode = ParseExpression (newNode, leftBuffer, true);
+                                if (addNode != null) 
+                                    newNode.nodes.Add(addNode);
+                            }
 
-                            // Only add that node if it's valid
-                            if (addNode != null)
-                                newNode.nodes.Add(addNode);
-                        }
-
-                        // Only check for right tokens if there are any
-                        if (i < expression.Count-1) {
                             // All of the tokens on the right
                             rightBuffer = expression.GetRange(i + 1,expression.Count - i - 1);       
-                            Console.WriteLine(repStr("¦", branch.depth) + "Right: " + stringList(rightBuffer));
-                            
+                                              
                             // Parsing a node from the right buffer
-                            node addNode = ParseExpression (newNode, rightBuffer);
-
-                            // Only add that node if it's valid
+                            addNode = ParseExpression (newNode, rightBuffer, true);
                             if (addNode != null) 
                                 newNode.nodes.Add(addNode);
-                        }  
-                         
-                        if ((i < expression.Count-1) && i > 0)
+
                             branch.nodes.Add(newNode);
-                        
-                        // We had to split up the expression, so set isSplit to true
-                        isSplit = true;
+
+                            // Break out of all loops
+                            brk = true;
+                            break;
+                        }
+                    }
+
+                    // Parse an expression thats between a pair of parenthesis, but ONLY 
+                    // if it wasn't split up before, and only if the whole block is surrounded by matching parenthesis
+                    if (surroundedPar) {
+                        expression = expression.GetRange(1,expression.Count - 2);
+                        return ParseExpression (branch, expression);
+                    } 
+
+                    if (expressionIsMethod) {
+                        node addNode = ParseMethod (branch, expression, foundMethod);
+                        if (addNode != null && !gotSplit) 
+                            branch.nodes.Add(addNode);     
+
+                        return addNode;                        
+                    }
+
+                    // Loop direction (0 to length - 1 or length - 1 to 0)
+                    if (rtl) {
+                        loop = k > 0;
+                        k--;
+                    }else{
+                        loop = k < Cat.operators.Length - 1;
+                        k++;
+                    }
+
+                    // Break out of all loops
+                    if (brk) {
+                        obrk = true;
                         break; 
                     }
                 }
+
+                // Break out of all loops
+                if (obrk)
+                    break;           
             }
 
-            // Parse an expression thats between a pair of parenthesis, but ONLY if it wasn't split up before
-            if (!isSplit && expression[0].value == "lpar" && expression[expression.Count - 1].value == "rpar") {
-                 expression = expression.GetRange(1,expression.Count - 2);
-                 Console.WriteLine(repStr("¦", branch.depth-1) + "No par: " + stringList(expression));
-
-                 return ParseExpression (branch, expression);
-            }
-
-            // Return no node if the expression list contains more than 1 token
+            // Return no node if the expression list contains more than 1 token at this point
             if (expression.Count > 1) {
                 return null;
             }
@@ -184,8 +324,75 @@ namespace Parsing
             return new node () {body = expression[0].value, depth = branch.depth + 1};
         }
 
+        static public node ParseMethod (node branch, List<Token> expression, Method method) {
+            // Initilise the method node
+            node methodNode = new node () {body = expression[0].value, depth = branch.depth + 1};
+
+            // arguments / parameters
+            // Initilise the arguments node
+            node arguments = new node() {body = "arguments", depth = methodNode.depth + 1};
+            methodNode.nodes.Add(arguments);
+
+            // Make a node for each argument for the method
+            foreach (Parameter arg in method.arguments) {
+                node addNode = new node() {body = arg.identifier, depth = arguments.depth + 1};
+
+                if (addNode != null)
+                    arguments.nodes.Add(addNode);
+            }
+
+            // Get an expression for each argument, seperated by commas
+            List<List<Token>> argumentExpressions = new List<List<Token>>();
+            int argId = 0;
+            argumentExpressions.Add(new List<Token>());
+
+            for (int i = 2; i < expression.Count - 1; i ++) {
+                Token token = expression[i];
+
+                if (token.value == "seperate") {
+                    argId++;
+                    argumentExpressions.Add(new List<Token>());
+                }else{
+                    argumentExpressions[argId].Add(token);
+                }
+            }
+
+            // Parse each expression
+            argId = 0;
+            foreach (List<Token> expr in argumentExpressions) {
+                node addNode = ParseExpression(arguments.nodes[argId],expr);
+                if (addNode != null) 
+                    arguments.nodes[argId].nodes.Add(addNode);
+
+                argId++;
+            }
+
+
+            return methodNode;
+        }
+
         static public node ParseTokens (List<Token> tokensList) 
         {
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+
+            //opPrecedence.Add(new OperatorCategory(new string[] {"(",")","."}));
+            opPrecedence.Add(new OperatorCategory(new string[] {"!","~"}, true, 1));
+            opPrecedence.Add(new OperatorCategory(new string[] {"^"}));           
+            opPrecedence.Add(new OperatorCategory(new string[] {"*","/","%"}));
+            opPrecedence.Add(new OperatorCategory(new string[] {"-","+"}));
+            opPrecedence.Add(new OperatorCategory(new string[] {"<<",">>",">>>"}));
+            opPrecedence.Add(new OperatorCategory(new string[] {"<",">",">=","<="}));
+            opPrecedence.Add(new OperatorCategory(new string[] {"==","!="}));
+            opPrecedence.Add(new OperatorCategory(new string[] {"&"}));
+            opPrecedence.Add(new OperatorCategory(new string[] {"|||"}));
+            opPrecedence.Add(new OperatorCategory(new string[] {"|"}));
+            opPrecedence.Add(new OperatorCategory(new string[] {"&&"}));
+            opPrecedence.Add(new OperatorCategory(new string[] {"||"}));
+            opPrecedence.Add(new OperatorCategory(new string[] {"?",":"}, true, 3));
+            opPrecedence.Add(new OperatorCategory(new string[] {"=","+=","-=","*=","/=","%=",">>=","<<=",">>>=","&=","|||=","|="},true));
+            opPrecedence.Add(new OperatorCategory(new string[] {","}));
+            opPrecedence.Reverse();
+
             node program = new node(){body = "program"};
             List<Token> tokenBuffer = new List<Token>();
 
@@ -202,7 +409,9 @@ namespace Parsing
                 tokenBuffer.Add(token);
             }
 
-            Console.WriteLine(program);
+            watch.Stop();
+
+            Console.WriteLine("Parse time: " + watch.ElapsedMilliseconds + " ms");
             return program;
         }
     }

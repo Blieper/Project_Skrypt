@@ -1,1 +1,7 @@
+<<<<<<< HEAD
 a = b + 2;
+=======
+print("hello world");
+print("poop sauce");
+
+>>>>>>> e6d62e25d64aef7a351b4c04d9a5ad9929d387a8

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Evaluation;
 using Tokenisation;
 using Parsing;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Skrypt
 {
@@ -11,12 +12,24 @@ namespace Skrypt
     {
         static Tokenizer tokenizer = new Tokenizer();
         static List<Token> tokens;
+        static node program;
 
+<<<<<<< HEAD
         static bool printTokens = true;
 
         static void Main(string[] args)
         {
             string filePath = @"C:\Users\yoran\Google Drive\PWT\C#\Address\ips.txt";
+=======
+        static bool printTokens = false;
+        static bool printAST    = true;
+
+        static void Main(string[] args)
+        {
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            string filePath = @"E:\GitHub\Project_Skrypt\code.skrypt";
+
+>>>>>>> e6d62e25d64aef7a351b4c04d9a5ad9929d387a8
             StreamReader sr = new StreamReader(filePath);
             string code = sr.ReadToEnd();
             sr.Close();
@@ -25,17 +38,7 @@ namespace Skrypt
 
             tokens = tokenizer.GetTokens(code);
 
-            parser.ParseTokens(tokens);
-
-            //node program = new node{body="program"};
-
-            // program.left = new node{body="assign"};
-            // program.left.left = new node{body="add"};
-            // program.left.left.left = new node{body="1"};  
-            // program.left.left.right = new node{body="2"};                        
-            // program.left.right = new node{body="d"};
-
-            //Console.WriteLine(program);
+            program = parser.ParseTokens(tokens);
 
             if (printTokens)
             {
@@ -85,7 +88,14 @@ namespace Skrypt
                     Console.Write(token.value + "\n");
                     Console.ResetColor();
                 }
+            }  
+
+            if (printAST) {
+                Console.WriteLine(program);
             }
+
+            watch.Stop();
+            Console.WriteLine("Total time: " + watch.ElapsedMilliseconds + " ms");
 
             return;
         }
