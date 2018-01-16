@@ -63,9 +63,9 @@ namespace Tokenisation
         None,
     }
 
-    class Tokenizer
+    static class Tokenizer
     {
-        List<Token> tokensList = new List<Token>();
+        static List<Token> tokensList = new List<Token>();
 
         static int line = 1;
         static int col = 0;
@@ -75,8 +75,8 @@ namespace Tokenisation
         static Regex decimalRegex       = new Regex(@"-?\d+(\.\d*)?([eE][-+]?\d+)?", RegexOptions.IgnoreCase);
         static Regex hexadecimalRegex   = new Regex(@"0x([A-Fa-f\d])+");
         static Regex commentRegex       = new Regex(@"(?:[/]{2,}(.*))|((/\*)+[\s\S]*(\*/)+)");
-        static Regex punctuatorRegex    = new Regex(@"(&&)|(\|\|)|(\|\|\|)|(==)|(!=)|(>=)|(<=)|(<<)|(>>)|(>>>)|[~=;<>+\-*/%^&|!\[\]\(\)\.\,{}]");
-        static Regex identifierRegex    = new Regex(@"(?:[_a-z]+[_a-z0-9]*)");
+        static Regex punctuatorRegex    = new Regex(@"(&&)|(\|\|)|(\|\|\|)|(==)|(!=)|(>=)|(<=)|(<<)|(>>)|(>>>)|(\+\+)|(--)|[~=;<>+\-*/%^&|!\[\]\(\)\.\,{}]");
+        static Regex identifierRegex    = new Regex(@"(?:[_a-zA-Z]+[_a-zA-Z0-9]*)");
         static Regex booleanRegex       = new Regex(@"(true|false)");
         static Regex keywordRegex       = new Regex(@"(if|else|class|this|new|null|public|private|protected|return|base|function|for|foreach|while|break|continue|switch|case|default|throw)");
 
@@ -101,7 +101,7 @@ namespace Tokenisation
             return NumberType.None;
         }
 
-        public string processNumber(string number)
+        public static string processNumber(string number)
         {
             if (getNumberType(number) == NumberType.Decimal)
             {
@@ -177,6 +177,10 @@ namespace Tokenisation
                     return "mod";  
                 case "^":   
                     return "pow";  
+                case "++":
+                    return "inc";  
+                case "--":   
+                    return "dec";  
                 case "&":   
                     return "band";  
                 case "|":   
@@ -192,7 +196,7 @@ namespace Tokenisation
                 case ">>>":   
                     return "bsh0";                                                     
                 default:
-                    return "";
+                    return Punctuator;
             }
         }
 
@@ -224,7 +228,9 @@ namespace Tokenisation
             "&&",   // and operator
             "|||",  // bitwise xor operator           
             "||",   // or operator       
-            "!=",   // is not operator             
+            "!=",   // is not operator   
+            "++",   // increment operator    
+            "--",   // decrement operator                        
             "+",    // plus operator  
             "-",    // minus operator  
             "/",    // divide operator  
@@ -233,7 +239,7 @@ namespace Tokenisation
             "%",    // modulus operator  
             "&",    // bitwise and operator  
             "|",    // bitwise or operator             
-            "~",    // bitwise not operator                    
+            "~",    // bitwise not operator                
             "\t", 
             "\n",  
             };
@@ -414,7 +420,7 @@ namespace Tokenisation
             return splitValues;
         }
 
-        private Token addToken(TokenType type, string value, int l, int c)
+        private static Token addToken(TokenType type, string value, int l, int c)
         {
             if (String.IsNullOrWhiteSpace(value)) { return new Token(TokenType.None,String.Empty,0,0); }
 
@@ -437,7 +443,7 @@ namespace Tokenisation
             return token;
         }
 
-        public TokenType getTokenType (string value) {
+        public static TokenType getTokenType (string value) {
   
             if (stringRegex.IsMatch(value)) {
                 return TokenType.String;
@@ -466,7 +472,7 @@ namespace Tokenisation
             return TokenType.None;
         }
 
-        public List<Token> GetTokens(string Code)
+        public static List<Token> GetTokens(string Code)
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
 

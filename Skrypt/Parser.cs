@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Globalization;
 using Tokenisation;
-using SkryptLibraries;
+using MethodBuilding;
+using static MethodBuilding.MethodContainer;
 
 namespace Parsing
 {
     public class node {
         public string body;
+        public object Value;
+        public TokenType type;
 
         public List<node> nodes = new List<node>();
         public int depth = 0;
@@ -88,83 +91,10 @@ namespace Parsing
             return newString;
         }
 
-        public static string processPunctuator (string Punctuator) 
-        {
-            switch (Punctuator) {
-                case "=":
-                    return "assign";  
-                case ";":
-                    return "eol";  
-                case ".":
-                    return "access";  
-                case ",":
-                    return "seperate";                      
-                case "!":
-                    return "not";   
-                case "==":
-                    return "is";               
-                case "!=":
-                    return "isnot";     
-                case "&&":
-                    return "and";     
-                case "||":
-                    return "or";    
-                case "<":   
-                    return "smaller"; 
-                case ">":  
-                    return "greater";                                  
-                case ">=":
-                    return "isgreater";     
-                case "<=":
-                    return "issmaller";  
-                case "(":
-                    return "lpar";
-                case ")":
-                    return "rpar";  
-                case "{":
-                    return "lbracket";  
-                case "}":   
-                    return "rbracket";       
-                case "[":
-                    return "laccess";  
-                case "]":   
-                    return "raccess";                                   
-                case "+":
-                    return "add";
-                case "-":
-                    return "sub";  
-                case "*":
-                    return "mul";  
-                case "/":   
-                    return "div";         
-                case "%":
-                    return "mod";  
-                case "^":   
-                    return "pow";  
-                case "&":   
-                    return "band";  
-                case "|":   
-                    return "bor";  
-                case "|||":   
-                    return "bxor";                       
-                case "~":   
-                    return "bnot";         
-                case "<<":   
-                    return "bshl"; 
-                case ">>":   
-                    return "bshr"; 
-                case ">>>":   
-                    return "bsh0";                                                     
-                default:
-                    return "";
-            }
-        }
-
         static public node ParseExpression (node branch, List<Token> expression, bool gotSplit = false) {
             List<Token>    leftBuffer   = new List<Token>();
             List<Token>    rightBuffer  = new List<Token>();
             List<Variable> variableList = new List<Variable>();
-            Library methods = new Library();
 
             int     i           = -1;
             int     opPC        = opPrecedence.Count;
@@ -192,17 +122,17 @@ namespace Parsing
                     bool    expressionIsMethod = false;
                     Method  foundMethod = null;
 
-                    string op = processPunctuator(Cat.operators[k]);
+                    string op = Tokenizer.processPunctuator(Cat.operators[k]);
 
                     while (i < expression.Count - 1) {
                         i++;
 
                         Token token = expression[i];
 
-                        if (methods.Exists(token.value)) {
+                        if (MethodHandler.Exists(token.value)) {
                             if (i == 0) {
                                 firstIsMethod = true; 
-                                foundMethod = methods.Get(token.value);
+                                foundMethod = MethodHandler.Get(token.value);
                             }
                         }
 
@@ -245,8 +175,9 @@ namespace Parsing
                                 continue;
                             }
                         } 
-
-                        if (op == token.value) {
+                        
+                        if (Tokenizer.processPunctuator(op.Replace("V","")) == token.value) {
+                            Console.WriteLine(op);
 
                             node newNode  = new node();
                             node addNode;
@@ -255,21 +186,32 @@ namespace Parsing
 
                             // All of the tokens on the left
                             leftBuffer  = expression.GetRange(0,i);
-                            
-                            // Parsing a node from the left buffer
-                            if (cnt != 1) {
+
+                            // All of the tokens on the right
+                            rightBuffer = expression.GetRange(i + 1,expression.Count - i - 1);  
+
+                            if (Tokenizer.processPunctuator(op) == "pdec" || Tokenizer.processPunctuator(op) == "pinc") {      
+                                op = op.Replace("V","");   
+                                newNode.body = "p" + Tokenizer.processPunctuator(op);
+
+                                Console.WriteLine(newNode.body);
+
                                 addNode = ParseExpression (newNode, leftBuffer, true);
+                                if (addNode != null) 
+                                    newNode.nodes.Add(addNode);                                    
+                            }else{
+                                // Parsing a node from the left buffer
+                                if (cnt != 1) {
+                                    addNode = ParseExpression (newNode, leftBuffer, true);
+                                    if (addNode != null) 
+                                        newNode.nodes.Add(addNode);
+                                }
+
+                                // Parsing a node from the right buffer
+                                addNode = ParseExpression (newNode, rightBuffer, true);
                                 if (addNode != null) 
                                     newNode.nodes.Add(addNode);
                             }
-
-                            // All of the tokens on the right
-                            rightBuffer = expression.GetRange(i + 1,expression.Count - i - 1);       
-                                              
-                            // Parsing a node from the right buffer
-                            addNode = ParseExpression (newNode, rightBuffer, true);
-                            if (addNode != null) 
-                                newNode.nodes.Add(addNode);
 
                             branch.nodes.Add(newNode);
 
@@ -320,55 +262,88 @@ namespace Parsing
                 return null;
             }
 
+            Token tkn = expression[0];
+            object Value = null;
+
+            switch (tkn.type) {
+                case TokenType.Numeric:
+                    Value = float.Parse(tkn.value);
+                break;
+                case TokenType.String:
+                    Value = tkn.value.Substring(1,tkn.value.Length - 2);
+                break;
+                case TokenType.Boolean:
+                    if (tkn.value == "true") {
+                        Value = true;
+                    }else{
+                        Value = false;
+                    }
+                break;
+                default:
+                break;
+            }
+
             // Return leaf node
-            return new node () {body = expression[0].value, depth = branch.depth + 1};
+            return new node () {body = expression[0].value, depth = branch.depth + 1, Value = Value, type = tkn.type};
         }
 
         static public node ParseMethod (node branch, List<Token> expression, Method method) {
+            // Initialise base node
+            node baseNode = new node () {body = "method", depth = branch.depth + 1};
+
             // Initilise the method node
-            node methodNode = new node () {body = expression[0].value, depth = branch.depth + 1};
+            node methodNode = new node () {body = expression[0].value, depth = baseNode.depth + 1};
+            baseNode.nodes.Add(methodNode);
+              
+            node typeNode = new node() {body = "type", depth = methodNode.depth + 1};
+            methodNode.nodes.Add(typeNode);
 
-            // arguments / parameters
-            // Initilise the arguments node
-            node arguments = new node() {body = "arguments", depth = methodNode.depth + 1};
-            methodNode.nodes.Add(arguments);
+            node t = new node() {body = method.returnType, depth = typeNode.depth + 1};
+            typeNode.nodes.Add(t);
 
-            // Make a node for each argument for the method
-            foreach (Parameter arg in method.arguments) {
-                node addNode = new node() {body = arg.identifier, depth = arguments.depth + 1};
+            if (method.arguments.Length > 0 && method.arguments != null) {
+                // arguments / parameters
+                // Initilise the arguments node
+                node arguments = new node() {body = "arguments", depth = methodNode.depth + 1};
+                methodNode.nodes.Add(arguments);
 
-                if (addNode != null)
-                    arguments.nodes.Add(addNode);
-            }
+                // Make a node for each argument for the method
+                foreach (string arg in method.arguments) {
+                    node addNode = new node() {body = arg, depth = arguments.depth + 1};
 
-            // Get an expression for each argument, seperated by commas
-            List<List<Token>> argumentExpressions = new List<List<Token>>();
-            int argId = 0;
-            argumentExpressions.Add(new List<Token>());
+                    if (addNode != null)
+                        arguments.nodes.Add(addNode);
+                }
 
-            for (int i = 2; i < expression.Count - 1; i ++) {
-                Token token = expression[i];
+                // Get an expression for each argument, seperated by commas
+                List<List<Token>> argumentExpressions = new List<List<Token>>();
+                int argId = 0;
+                argumentExpressions.Add(new List<Token>());
 
-                if (token.value == "seperate") {
+                for (int i = 2; i < expression.Count - 1; i ++) {
+                    Token token = expression[i];
+
+                    if (token.value == "seperate") {
+                        argId++;
+                        argumentExpressions.Add(new List<Token>());
+                    }else{
+                        argumentExpressions[argId].Add(token);
+                    }
+                }
+
+                // Parse each expression
+                argId = 0;
+                foreach (List<Token> expr in argumentExpressions) {
+                    node addNode = ParseExpression(arguments.nodes[argId],expr);
+                    if (addNode != null) 
+                        arguments.nodes[argId].nodes.Add(addNode);
+
                     argId++;
-                    argumentExpressions.Add(new List<Token>());
-                }else{
-                    argumentExpressions[argId].Add(token);
                 }
             }
 
-            // Parse each expression
-            argId = 0;
-            foreach (List<Token> expr in argumentExpressions) {
-                node addNode = ParseExpression(arguments.nodes[argId],expr);
-                if (addNode != null) 
-                    arguments.nodes[argId].nodes.Add(addNode);
 
-                argId++;
-            }
-
-
-            return methodNode;
+            return baseNode;
         }
 
         static public node ParseTokens (List<Token> tokensList) 
@@ -376,7 +351,7 @@ namespace Parsing
             var watch = System.Diagnostics.Stopwatch.StartNew();
 
             //opPrecedence.Add(new OperatorCategory(new string[] {"(",")","."}));
-            opPrecedence.Add(new OperatorCategory(new string[] {"!","~"}, true, 1));
+            opPrecedence.Add(new OperatorCategory(new string[] {"!","~","--","++","V--","V++"}, true, 1));
             opPrecedence.Add(new OperatorCategory(new string[] {"^"}));           
             opPrecedence.Add(new OperatorCategory(new string[] {"*","/","%"}));
             opPrecedence.Add(new OperatorCategory(new string[] {"-","+"}));
@@ -401,7 +376,9 @@ namespace Parsing
 
                 if (token.value == "eol") 
                 {
-                    ParseExpression(program,tokenBuffer);
+                    node baseNode = new node () {body = "expression", depth = program.depth + 1};
+                    program.nodes.Add(baseNode);
+                    ParseExpression(baseNode,tokenBuffer);
                     tokenBuffer.Clear();
                     continue;
                 }
