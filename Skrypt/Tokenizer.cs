@@ -78,7 +78,7 @@ namespace Tokenisation
         static Regex punctuatorRegex    = new Regex(@"(&&)|(\|\|)|(\|\|\|)|(==)|(!=)|(>=)|(<=)|(<<)|(>>)|(>>>)|(\+\+)|(--)|[~=;<>+\-*/%^&|!\[\]\(\)\.\,{}]");
         static Regex identifierRegex    = new Regex(@"(?:[_a-zA-Z]+[_a-zA-Z0-9]*)");
         static Regex booleanRegex       = new Regex(@"(true|false)");
-        static Regex keywordRegex       = new Regex(@"(if|else|elseif|class|this|new|null|public|private|protected|return|base|function|for|foreach|while|break|continue|switch|case|default|throw)");
+        static Regex keywordRegex       = new Regex(@"(if|else|elseif|class|this|new|null|public|private|protected|return|base|function|for|foreach|while|break|continue|switch|case|default|throw|string|numeric|bool|void)");
 
         public static NumberType getNumberType(string String)
         {

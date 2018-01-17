@@ -22,16 +22,49 @@ namespace Execution {
     }
 
     static public class Executor {
-        static List<Variable> Variables = new List<Variable>();
+        static public List<Variable> Variables = new List<Variable>();
 
-        static public void ExecuteProgram (node Program) {
+        static public void ExecuteProgram (node Program, Variable[] scopedVars = null) {
+            if (scopedVars != null) {
+                for (int i = 0; i < scopedVars.Length; i++ ) {
+                    Variables.Add(scopedVars[i]);
+                }
+            }
+
+            bool returned = false;
+
             foreach (node Node in Program.nodes) {
                 switch (Node.body) {
                     case "expression":
-                        ExecuteExpression(Node.nodes[0]);
+                        Variable returnTest = ExecuteExpression(Node.nodes[0]);
+
+                        if (returnTest.Type == "return") {
+                            returned = true;
+                            break;
+                        }
                     break;
+                    case "branch":
+                        ExecuteBranch(Node);
+                    break;
+                    // case "methoddeclaration":
+                    //     ExecuteMethodDeclaration(Node);
+                    // break;
                 }
+
+                if (returned)
+                    break;
             }
+
+            if (scopedVars != null) {
+                for (int i = 0; i < scopedVars.Length; i++ ) {
+                    DeleteVariable(scopedVars[i]);
+                }  
+            }
+        }
+
+        static public void DeleteVariable (Variable var) {
+            if (Variables.Exists(x => x == var))
+                Variables.Remove(var);
         }
 
         static Variable GetVariableWithType (node Expr) {
@@ -75,6 +108,9 @@ namespace Execution {
 
             if (Expr.body == "method") 
                 return ExecuteMethod(Expr.nodes[0]);
+
+            if (Expr.body == "return" && Expr.nodes.Count == 0) 
+                return new Variable(string.Empty,"return");
 
             if (Expr.nodes.Count > 0) {
                 node Left = Expr.nodes[0];
@@ -242,7 +278,95 @@ namespace Execution {
                                     return temp;
                                 default:
                                     throw new SkryptInvalidOperationException(LeftVar.Type,RightVar.Type,Expr.body); 
-                            }                            
+                            } 
+                        case "is":
+                            switch (LeftVar.Type + "_" + RightVar.Type) {
+                                case "numeric_numeric":
+                                    temp.Value = Convert.ToDouble(LeftVar.Value) == Convert.ToDouble(RightVar.Value);
+                                    temp.Type = "bool";
+                                    return temp;
+                                case "string_string":
+                                    temp.Value = Convert.ToString(LeftVar.Value) == Convert.ToString(RightVar.Value);
+                                    temp.Type = "string";
+                                    return temp;  
+                                case "bool_bool":
+                                    temp.Value = Convert.ToBoolean(LeftVar.Value) == Convert.ToBoolean(RightVar.Value);
+                                    temp.Type = "bool";
+                                    return temp;                                                                       
+                                default:
+                                    throw new SkryptInvalidOperationException(LeftVar.Type,RightVar.Type,Expr.body); 
+                            }   
+                        case "isnot":
+                            switch (LeftVar.Type + "_" + RightVar.Type) {
+                                case "numeric_numeric":
+                                    temp.Value = Convert.ToDouble(LeftVar.Value) != Convert.ToDouble(RightVar.Value);
+                                    temp.Type = "bool";
+                                    return temp;
+                                case "string_string":
+                                    temp.Value = Convert.ToString(LeftVar.Value) != Convert.ToString(RightVar.Value);
+                                    temp.Type = "string";
+                                    return temp;  
+                                case "bool_bool":
+                                    temp.Value = Convert.ToBoolean(LeftVar.Value) != Convert.ToBoolean(RightVar.Value);
+                                    temp.Type = "bool";
+                                    return temp;                                       
+                                default:
+                                    throw new SkryptInvalidOperationException(LeftVar.Type,RightVar.Type,Expr.body); 
+                            }     
+                        case "or":
+                            switch (LeftVar.Type + "_" + RightVar.Type) {
+                                case "bool_bool":
+                                    temp.Value = Convert.ToBoolean(LeftVar.Value) || Convert.ToBoolean(RightVar.Value);
+                                    temp.Type = "bool";
+                                    return temp;                                       
+                                default:
+                                    throw new SkryptInvalidOperationException(LeftVar.Type,RightVar.Type,Expr.body); 
+                            }                                                                                                         
+                        case "and":
+                            switch (LeftVar.Type + "_" + RightVar.Type) {
+                                case "bool_bool":
+                                    temp.Value = Convert.ToBoolean(LeftVar.Value) && Convert.ToBoolean(RightVar.Value);
+                                    temp.Type = "bool";
+                                    return temp;                                       
+                                default:
+                                    throw new SkryptInvalidOperationException(LeftVar.Type,RightVar.Type,Expr.body); 
+                            }    
+                        case "smaller":
+                            switch (LeftVar.Type + "_" + RightVar.Type) {
+                                case "numeric_numeric":
+                                    temp.Value = Convert.ToDouble(LeftVar.Value) < Convert.ToDouble(RightVar.Value);
+                                    temp.Type = "bool";
+                                    return temp;                                    
+                                default:
+                                    throw new SkryptInvalidOperationException(LeftVar.Type,RightVar.Type,Expr.body); 
+                            } 
+                        case "greater":
+                            switch (LeftVar.Type + "_" + RightVar.Type) {
+                                case "numeric_numeric":
+                                    temp.Value = Convert.ToDouble(LeftVar.Value) > Convert.ToDouble(RightVar.Value);
+                                    temp.Type = "bool";
+                                    return temp;                                    
+                                default:
+                                    throw new SkryptInvalidOperationException(LeftVar.Type,RightVar.Type,Expr.body); 
+                            }   
+                        case "issmaller":
+                            switch (LeftVar.Type + "_" + RightVar.Type) {
+                                case "numeric_numeric":
+                                    temp.Value = Convert.ToDouble(LeftVar.Value) <= Convert.ToDouble(RightVar.Value);
+                                    temp.Type = "bool";
+                                    return temp;                                    
+                                default:
+                                    throw new SkryptInvalidOperationException(LeftVar.Type,RightVar.Type,Expr.body); 
+                            } 
+                        case "isgreater":
+                            switch (LeftVar.Type + "_" + RightVar.Type) {
+                                case "numeric_numeric":
+                                    temp.Value = Convert.ToDouble(LeftVar.Value) >= Convert.ToDouble(RightVar.Value);
+                                    temp.Type = "bool";
+                                    return temp;                                    
+                                default:
+                                    throw new SkryptInvalidOperationException(LeftVar.Type,RightVar.Type,Expr.body); 
+                            }                                                                                        
                     }
                 }else{
                     Variable variable = ExecuteExpression(Expr.nodes[0]);
@@ -254,6 +378,17 @@ namespace Execution {
                         ExistingVar = Variables.Find(x => x.Identifier == Expr.nodes[0].body);
 
                     switch (body) {
+                        case "return":
+                            Variable found = Variables.Find(x => x.Type == "return");
+
+                            int foundIndex = Variables.IndexOf(found);
+                            
+                            if (variable != null) {
+                                Variables[foundIndex].Value = variable.Value;
+                                Variables[foundIndex].Type  = variable.Type;
+                            }
+                                                      
+                            return new Variable(string.Empty,"return");
                         case "not":
                             switch (variable.Type) {
                                 case "bool":
@@ -274,10 +409,17 @@ namespace Execution {
                             } 
                         case "pinc":
                             switch (variable.Type) {
-                                case "numeric":
-                                    temp.Value = Convert.ToDouble(ExistingVar.Value) + 1;
-                                    temp.Type = "numeric";
-                                    return temp;
+                                case "numeric":                                    
+                                    if (OnExistingVar) {
+                                        temp.Value = Convert.ToDouble(ExistingVar.Value) + 1;
+                                        temp.Type = "numeric";
+
+                                        ExistingVar.Value = temp.Value;
+
+                                        return temp;                                        
+                                    }else{
+                                        throw new SkryptInvalidOperationException(null,"non-variable",body);
+                                    }
                                 default:
                                     throw new SkryptInvalidOperationException(null,variable.Type,body); 
                             }  
@@ -300,9 +442,16 @@ namespace Execution {
                         case "pdec":
                             switch (variable.Type) {
                                 case "numeric":
-                                    temp.Value = Convert.ToDouble(ExistingVar.Value) - 1;
-                                    temp.Type = "numeric";
-                                    return temp;
+                                    if (OnExistingVar) {
+                                        temp.Value = Convert.ToDouble(ExistingVar.Value) - 1;
+                                        temp.Type = "numeric";
+
+                                        ExistingVar.Value = temp.Value;
+
+                                        return temp;                                        
+                                    }else{
+                                        throw new SkryptInvalidOperationException(null,"non-variable",body);
+                                    }
                                 default:
                                     throw new SkryptInvalidOperationException(null,variable.Type,body); 
                             }                              
@@ -334,8 +483,10 @@ namespace Execution {
                 throw new SkryptMethodDoesNotExistException(methodNode.body);
 
             Method method = MethodHandler.Get(methodNode.body);
+            SkryptMethod skmethod = MethodHandler.GetSk(methodNode.body);
+
             string type = methodNode.nodes[0].body;
-            List<node> argNodes;
+            List<node> argNodes = null;
             object[] args = new object[0];
 
             if (method.arguments.Length > 0 && method.arguments != null) {
@@ -353,10 +504,89 @@ namespace Execution {
                     i++;
                 }
             }
+                
+            Variable returnVariable;
 
-            Variable returnVariable = method.Run(args);
+            if (method.predefined) {
+                returnVariable = method.Run(args);
+            }else{
+                Variable[] scopedVars = null;
+                
+                if (argNodes != null) {
+                    scopedVars = new Variable[argNodes.Count];
+
+                    int i = 0;
+
+                    foreach (node argNode in argNodes) {                  
+                        node Expr = argNode.nodes[0];
+                        Variable solved = ExecuteExpression(Expr);
+                        solved.Identifier = argNode.body;
+
+                        scopedVars[i] = solved;
+                        
+                        i++;
+                    }
+                }
+
+                returnVariable = skmethod.Run(scopedVars);
+            }
 
             return returnVariable;
+        }
+
+        static public Variable ExecuteMethodDeclaration (node methodNode) {
+            string type = methodNode.nodes[0].body;
+            string Identifier = methodNode.nodes[1].body;
+            string[] args = new string[methodNode.nodes[2].nodes.Count];
+
+            int i = 0;
+
+            foreach (node argNode in methodNode.nodes[2].nodes) {
+                args[i] = argNode.body;
+                i++;
+            }
+
+            node body = methodNode.nodes[3];
+
+            if (!MethodHandler.Exists(Identifier)) {
+                MethodHandler.Add(Identifier, type, args, body);
+            }else{
+                SkryptMethod found = MethodHandler.GetSk(Identifier);
+
+                int foundIndex = MethodContainer.SKmethods.IndexOf(found);
+                
+                MethodContainer.SKmethods[foundIndex].methodNode = body;                                    
+            }
+
+            Variable returnVariable = new Variable(Identifier, "method", body);
+
+            return returnVariable;
+        }
+
+        static public void ExecuteBranch (node branchNode) {           
+            string type = branchNode.nodes[0].nodes[0].body;
+
+            if (type == "elseif" || type == "if" || type == "while") {
+                node condition = branchNode.nodes[1].nodes[0];
+                node body = branchNode.nodes[2];
+                node secondary = branchNode.nodes.Count > 3 ? branchNode.nodes[3] : null;
+
+                Variable solvedCondition = ExecuteExpression(condition);
+
+                if (solvedCondition.Type == "bool") {
+                    if (Convert.ToBoolean(solvedCondition.Value) == true) {
+                        ExecuteProgram(body);
+                    }else{
+                        if (secondary != null) 
+                            ExecuteBranch(secondary);
+                    }
+                }
+
+            } else if (type == "else") { 
+                node body = branchNode.nodes[1];
+
+                ExecuteProgram(body);
+            }
         }
 
         static public void Run (string Code, bool printAST = false, bool printTokens = false) {
@@ -422,6 +652,8 @@ namespace Execution {
             if (printAST) {
                 Console.WriteLine(program);
             }
+                
+            Console.WriteLine("Executing Skrypt...");
 
             ExecuteProgram(program);
 

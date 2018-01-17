@@ -664,30 +664,28 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\yoran\\.nuget\\packages\\": {},
+    "C:\\Users\\User\\.nuget\\packages\\": {},
     "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\GitHub\\Project_Skrypt\\Skrypt\\Skrypt.csproj",
+      "projectUniqueName": "E:\\GitHub\\Project_Skrypt\\Skrypt\\Skrypt.csproj",
       "projectName": "Skrypt",
-      "projectPath": "D:\\GitHub\\Project_Skrypt\\Skrypt\\Skrypt.csproj",
-      "packagesPath": "C:\\Users\\yoran\\.nuget\\packages\\",
-      "outputPath": "D:\\GitHub\\Project_Skrypt\\Skrypt\\obj\\",
+      "projectPath": "E:\\GitHub\\Project_Skrypt\\Skrypt\\Skrypt.csproj",
+      "packagesPath": "C:\\Users\\User\\.nuget\\packages\\",
+      "outputPath": "E:\\GitHub\\Project_Skrypt\\Skrypt\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
       ],
       "configFilePaths": [
-        "C:\\Users\\yoran\\AppData\\Roaming\\NuGet\\NuGet.Config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        "C:\\Users\\User\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "netcoreapp2.0"
       ],
       "sources": {
-        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {

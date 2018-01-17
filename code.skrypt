@@ -1,10 +1,11 @@
-
-i = true == true;
-
-if i == 1 {
-    print("hello world");
-} elseif () {
-
-} else {
-    print("bye world");
+function numeric fact (num) {
+    if num == 0 {
+        return 1;
+    } else {
+        return num * fact (num - 1);
+    }
 }
+
+a = fact(4);
+
+print(a);

@@ -5,6 +5,7 @@ using System.Globalization;
 using Tokenisation;
 using ErrorHandling;
 using MethodBuilding;
+using Execution;
 using static MethodBuilding.MethodContainer;
 
 namespace Parsing
@@ -54,11 +55,6 @@ namespace Parsing
         }
     }
 
-    public class Variable {
-        public string value;
-        public string type;
-    }
-
     static public class parser {
 
         public static List<OperatorCategory> opPrecedence = new List<OperatorCategory>();
@@ -95,7 +91,6 @@ namespace Parsing
         static public node ParseExpression (node branch, List<Token> expression, bool gotSplit = false) {
             List<Token>    leftBuffer   = new List<Token>();
             List<Token>    rightBuffer  = new List<Token>();
-            List<Variable> variableList = new List<Variable>();
 
             int     i           = -1;
             int     opPC        = opPrecedence.Count;
@@ -189,7 +184,7 @@ namespace Parsing
 
                             // All of the tokens on the right
                             rightBuffer = expression.GetRange(i + 1,expression.Count - i - 1);  
-
+                            
                             if (op == "dec" || op == "inc") {     
                                
                                 if (leftBuffer.Count > 0 && rightBuffer.Count == 0) {
@@ -210,10 +205,24 @@ namespace Parsing
                                         newNode.nodes.Add(addNode);
                                 }
 
-                                // Parsing a node from the right buffer
-                                addNode = ParseExpression (newNode, rightBuffer, true);
-                                if (addNode != null) 
-                                    newNode.nodes.Add(addNode);
+                                if (op == "return") {
+                                    if (rightBuffer.Count > 0) {
+
+                                        Console.WriteLine(stringList(rightBuffer));
+
+                                        // Parsing a node from the right buffer
+                                        addNode = ParseExpression (newNode, rightBuffer, true);
+
+                                        if (addNode != null) 
+                                            newNode.nodes.Add(addNode);
+                                        
+                                    }
+                                }else{
+                                    // Parsing a node from the right buffer
+                                    addNode = ParseExpression (newNode, rightBuffer, true);
+                                    if (addNode != null) 
+                                        newNode.nodes.Add(addNode);
+                                }
                             }
 
                             branch.nodes.Add(newNode);
@@ -265,26 +274,27 @@ namespace Parsing
                 return null;
             }
 
-            Token tkn = expression[0];
-            object Value = null;
+                Token tkn = expression[0];
+                object Value = null;
 
-            switch (tkn.type) {
-                case TokenType.Numeric:
-                    Value = float.Parse(tkn.value);
-                break;
-                case TokenType.String:
-                    Value = tkn.value.Substring(1,tkn.value.Length - 2);
-                break;
-                case TokenType.Boolean:
-                    if (tkn.value == "true") {
-                        Value = true;
-                    }else{
-                        Value = false;
-                    }
-                break;
-                default:
-                break;
-            }
+                switch (tkn.type) {
+                    case TokenType.Numeric:
+                        Value = float.Parse(tkn.value);
+                    break;
+                    case TokenType.String:
+                        Value = tkn.value.Substring(1,tkn.value.Length - 2);
+                    break;
+                    case TokenType.Boolean:
+                        if (tkn.value == "true") {
+                            Value = true;
+                        }else{
+                            Value = false;
+                        }
+                    break;
+                    default:
+                    break;
+                }
+
 
             // Return leaf node
             return new node () {body = expression[0].value, depth = branch.depth + 1, Value = Value, type = tkn.type};
@@ -376,19 +386,43 @@ namespace Parsing
                     tkn = tokenList[i];
                 }
 
-                Console.WriteLine(stringList(conditionTokens));
+                if (conditionTokens.Count == 0) 
+                    throw new SkryptException("Condition cannot be empty",tokenList[0]);
 
                 addNode = ParseExpression(conditionNode,conditionTokens);
 
                 if (addNode != null) 
-                    conditionNode.nodes[0].nodes.Add(addNode);
+                    conditionNode.nodes.Add(addNode);
             }
         
             node bodyNode = new node() {body = "body", depth = baseNode.depth + 1};
             baseNode.nodes.Add(bodyNode);
 
             List<Token> bodyTokens = tokenList.GetRange(i + 1,tokenList.Count - i - 2);
-            addNode = ParseGlobal(bodyNode,bodyTokens);
+            bodyNode = ParseGlobal(bodyNode,bodyTokens);
+
+            return baseNode;
+        }
+
+        static public node ParseMethodDeclaration (node branch, List<Token> tkns, node argsNode, List<Token> body) {
+             // Initialise base node
+            node baseNode = new node() {body = "methoddeclaration", depth = branch.depth + 1};    
+            
+            node typeNode = new node() {body = tkns[0].value, depth = baseNode.depth + 1};
+            baseNode.nodes.Add(typeNode);            
+            
+            node identifierNode = new node() {body = tkns[1].value, depth = baseNode.depth + 1};
+            baseNode.nodes.Add(identifierNode); 
+
+            node bodyNode = new node() {body = "body", depth = baseNode.depth + 1};
+            baseNode.nodes.Add(bodyNode); 
+
+            argsNode.depth = baseNode.depth + 1;
+            baseNode.nodes.Add(argsNode); 
+
+            ParseGlobal(bodyNode, body);
+
+            branch.nodes.Add(baseNode);
 
             return baseNode;
         }
@@ -398,17 +432,110 @@ namespace Parsing
 
             List<Token> tokenBuffer = new List<Token>();
 
-            bool isBranch = false;
-            int branchDepth = 0;
-            string branchType = "";
-            bool prevWasIf = false;
-            bool prevWasLiteralIf = false;
-            node ifNode = null;
+            // Branching
+            bool    isBranch            = false;
+            int     branchDepth         = 0;
+            string  branchType          = "";
+            bool    prevWasIf           = false;
+            bool    prevWasLiteralIf    = false;
+            node    ifNode              = null;
+
+            // Method declaration
+            bool    isMethod        = false;
+            bool    isMethodArgs    = false;
+            bool    isMethodBody    = false; 
+            bool    hasMethodArgs   = false;
+            int     bracketDepth    = 0;
+            node    argsNode        = null; 
+
+            string  methodType = "";
+            List<Token> methodArgs = new List<Token>();
+            List<Token> methodBody = new List<Token>();
+            List<Token> returnExpr = new List<Token>();
 
             for (int i = 0; i < tokensList.Count; i++) {
                 Token token = tokensList[i];
 
-                if (token.value == "if" || token.value == "while" || token.value == "for" || token.value == "else" || token.value == "elseif") {
+                if (token.value == "lbracket")
+                    bracketDepth++; 
+
+                if (token.value == "rbracket")
+                    bracketDepth--; 
+
+                if (token.value == "function") {
+                    isMethod = true;
+                    continue;
+                } else if (isMethod) {
+                    methodType = token.value;
+
+                    if (!hasMethodArgs && token.value == "lpar") {
+                        isMethodArgs = true;
+                        continue;
+                    }
+
+                    if (!hasMethodArgs && isMethodArgs && token.value == "rpar") {
+                        isMethodArgs = false;
+                        hasMethodArgs = true;
+
+                        Console.WriteLine("Adding method " + tokenBuffer[1].value);
+                        MethodHandler.Add(tokenBuffer[1].value,String.Empty,new string[0],(node)null);
+                         
+                        SkryptMethod found = MethodHandler.GetSk(tokenBuffer[1].value);
+
+                        int foundIndex = MethodContainer.SKmethods.IndexOf(found);
+
+                        MethodContainer.SKmethods[foundIndex].returnType = tokenBuffer[0].value;                       
+                        argsNode = new node() {body = "arguments"};
+
+                        int j = 0;
+                        string[] argNames = new string[methodArgs.Count];
+                        MethodContainer.SKmethods[foundIndex].arguments = new string[methodArgs.Count];
+
+                        foreach (Token argTkn in methodArgs) {
+                            MethodContainer.SKmethods[foundIndex].arguments[j] = argTkn.value;
+                            argNames[j] = argTkn.value;
+                            j++;
+                        
+                            if (argTkn.value == "seperate") 
+                                continue;
+
+                            argsNode.nodes.Add(new node() {body = argTkn.value, depth = argsNode.depth + 1});
+                        }
+
+ 
+                        continue;
+                    }
+
+                    if (isMethodArgs) {
+                        methodArgs.Add(token);
+                    }
+
+                    if (!isMethodBody && hasMethodArgs && token.value == "lbracket") {
+                        isMethodBody = true;
+                        continue;
+                    }
+
+                    if (isMethodBody && token.value == "rbracket" && bracketDepth == 0) {
+                        node MethodNode = ParseMethodDeclaration(newNode, tokenBuffer, argsNode, methodBody);
+
+                        Executor.ExecuteMethodDeclaration(MethodNode);
+
+                        isMethodBody = false;
+                        //hasMethodBody = true;
+                        tokenBuffer.Clear();
+                        isMethod = false;
+                        continue;
+                    }
+
+                    if (isMethodBody) {
+                        methodBody.Add(token);
+                    }
+
+                    tokenBuffer.Add(token); 
+
+                    continue;                 
+
+                } else if (token.value == "if" || token.value == "while" || token.value == "for" || token.value == "else" || token.value == "elseif") {
                     branchDepth++;
                     branchType = token.value;
 
@@ -418,41 +545,52 @@ namespace Parsing
                         branchDepth--;
 
                         if (branchDepth == 0) {
-                            tokenBuffer.Add(token);
-
                             node baseNode  = new node () {body = "branch", depth = newNode.depth + 1};
+                            tokenBuffer.Add(token);
+                            
+                            if ((branchType == "else" || branchType == "elseif")) { 
 
-                            if ((branchType == "else" || branchType == "elseif") && prevWasIf) { 
-                                
+                                if ((branchType == "else" || branchType == "elseif") && !prevWasIf)                     
+                                    throw new SkryptException(branchType + " has to be preceeded by if/elseif statement", tokenBuffer[0]);
+
                                 if ((branchType == "elseif") && !prevWasLiteralIf) 
-                                    throw new SkryptStatementErrorException(branchType);
+                                    throw new SkryptException(branchType + " has to be preceeded by if statement", tokenBuffer[0]);
 
-                                node addNode  = new node () {body = "branch", depth = ifNode.depth + 1};
+                            
+                                if (branchType == "elseif")   
+                                    prevWasIf = true;
+
+                                node addNode  = new node () {body = "secondary", depth = ifNode.depth + 1};
                                 ifNode.nodes.Add(addNode); 
+                                 
+                                node branchNode = ParseBranch(addNode,tokenBuffer,branchType);
+                                ifNode = branchNode;
 
-                                ParseBranch(addNode,tokenBuffer,branchType); 
                                 prevWasLiteralIf = false;
-                            }else if ((branchType == "else" || branchType == "elseif") && !prevWasLiteralIf) {                      
-                                throw new SkryptStatementErrorException(branchType);
-                            }else{
-                                baseNode.nodes.Add(ParseBranch(baseNode,tokenBuffer,branchType)); 
-                            }
-
-                            if (branchType == "if") {
-                                ifNode = baseNode;
+                                
+                                tokenBuffer.Clear();
+                                continue;
+                            }else if (branchType == "if") {
                                 prevWasLiteralIf = true;
-                            }
-
-                            if (branchType == "if" || branchType == "elseif")   
                                 prevWasIf = true;
 
+                                ifNode = ParseBranch(baseNode,tokenBuffer,branchType);
+
+                                newNode.nodes.Add(baseNode); 
+
+                                tokenBuffer.Clear();
+                                continue;
+                            }
+
                             tokenBuffer.Clear();
+                            continue;
                         }
                     }
                 }else if (token.value == "eol") 
                 {
                     node baseNode = new node () {body = "expression", depth = newNode.depth + 1};
                     newNode.nodes.Add(baseNode);
+
                     ParseExpression(baseNode,tokenBuffer);
                     tokenBuffer.Clear();
                     continue;
@@ -484,6 +622,7 @@ namespace Parsing
             opPrecedence.Add(new OperatorCategory(new string[] {"?",":"}, true, 3));
             opPrecedence.Add(new OperatorCategory(new string[] {"=","+=","-=","*=","/=","%=",">>=","<<=",">>>=","&=","|||=","|="},true));
             opPrecedence.Add(new OperatorCategory(new string[] {","}));
+            opPrecedence.Add(new OperatorCategory(new string[] {"return"},true,1));            
             opPrecedence.Reverse();
 
             node program = new node(){body = "program"};
