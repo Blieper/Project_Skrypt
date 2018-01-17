@@ -46,6 +46,16 @@ namespace ErrorHandling {
         public SkryptMethodDoesNotExistException(string v, string message, Exception inner) : base(message, inner) {}
     }
 
+    public class SkryptStatementErrorException : SkryptException {
+        public SkryptStatementErrorException(string id) {
+            Console.WriteLine("\t '" + id + "' has to be part of an 'if' statement");
+        }
+
+        public SkryptStatementErrorException(string v, string message) : base(message) {}
+
+        public SkryptStatementErrorException(string v, string message, Exception inner) : base(message, inner) {}
+    }
+
     public class Rule {
         string Preceded;
         string[] Expected;

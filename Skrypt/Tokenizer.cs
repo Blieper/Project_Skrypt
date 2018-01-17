@@ -78,7 +78,7 @@ namespace Tokenisation
         static Regex punctuatorRegex    = new Regex(@"(&&)|(\|\|)|(\|\|\|)|(==)|(!=)|(>=)|(<=)|(<<)|(>>)|(>>>)|(\+\+)|(--)|[~=;<>+\-*/%^&|!\[\]\(\)\.\,{}]");
         static Regex identifierRegex    = new Regex(@"(?:[_a-zA-Z]+[_a-zA-Z0-9]*)");
         static Regex booleanRegex       = new Regex(@"(true|false)");
-        static Regex keywordRegex       = new Regex(@"(if|else|class|this|new|null|public|private|protected|return|base|function|for|foreach|while|break|continue|switch|case|default|throw)");
+        static Regex keywordRegex       = new Regex(@"(if|else|elseif|class|this|new|null|public|private|protected|return|base|function|for|foreach|while|break|continue|switch|case|default|throw)");
 
         public static NumberType getNumberType(string String)
         {
@@ -202,6 +202,8 @@ namespace Tokenisation
 
         public static List<CodeChunk> splitCode(string value, StringSplitOptions splitOptions = StringSplitOptions.None)
         {
+            value += '\n';
+
             string[] separators = { 
             " ", 
             ";",    // end of operation 
@@ -241,7 +243,7 @@ namespace Tokenisation
             "|",    // bitwise or operator             
             "~",    // bitwise not operator                
             "\t", 
-            "\n",  
+            "\n"
             };
 
             List<CodeChunk> splitValues = new List<CodeChunk>();
@@ -251,6 +253,7 @@ namespace Tokenisation
             bool foundString    = false;
             bool foundComment   = false;
             bool multiComment   = false;
+            bool foundIncremental = false;
             char stringChar     = '\"';
 
             int chunkCol   = 1;
@@ -338,6 +341,10 @@ namespace Tokenisation
                     }
                 }
 
+                if (foundIncremental) {
+                    
+                }
+
                 // Check for each symbol
                 for (int sepIndex = 0; sepIndex < separators.Length; sepIndex++)
                 {
@@ -378,6 +385,11 @@ namespace Tokenisation
                             foundNumber = true;
                             break;                            
                         } 
+
+                        if ((separator == "++" || separator == "--") && getTokenType("" + value[pos + 2]) == TokenType.Identifier) {
+                            //foundIncremental = true;
+                            //break;
+                        }
 
                         // add the section of string before the separator 
                         // (unless its empty and we are discarding empty sections)

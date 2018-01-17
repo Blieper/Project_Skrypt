@@ -1,1 +1,10 @@
-print(e());
+
+i = true == true;
+
+if i == 1 {
+    print("hello world");
+} elseif () {
+
+} else {
+    print("bye world");
+}

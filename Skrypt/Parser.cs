@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Globalization;
 using Tokenisation;
+using ErrorHandling;
 using MethodBuilding;
 using static MethodBuilding.MethodContainer;
 
@@ -176,8 +177,7 @@ namespace Parsing
                             }
                         } 
                         
-                        if (Tokenizer.processPunctuator(op.Replace("V","")) == token.value) {
-                            Console.WriteLine(op);
+                        if (op == token.value) {
 
                             node newNode  = new node();
                             node addNode;
@@ -190,13 +190,16 @@ namespace Parsing
                             // All of the tokens on the right
                             rightBuffer = expression.GetRange(i + 1,expression.Count - i - 1);  
 
-                            if (Tokenizer.processPunctuator(op) == "pdec" || Tokenizer.processPunctuator(op) == "pinc") {      
-                                op = op.Replace("V","");   
-                                newNode.body = "p" + Tokenizer.processPunctuator(op);
-
-                                Console.WriteLine(newNode.body);
-
-                                addNode = ParseExpression (newNode, leftBuffer, true);
+                            if (op == "dec" || op == "inc") {     
+                               
+                                if (leftBuffer.Count > 0 && rightBuffer.Count == 0) {
+                                    newNode.body = "p" + Tokenizer.processPunctuator(op);
+                                    addNode = ParseExpression (newNode, leftBuffer, true);
+                                }else{
+                                    newNode.body = Tokenizer.processPunctuator(op);
+                                    addNode = ParseExpression (newNode, rightBuffer, true);
+                                }
+                                
                                 if (addNode != null) 
                                     newNode.nodes.Add(addNode);                                    
                             }else{
@@ -346,12 +349,127 @@ namespace Parsing
             return baseNode;
         }
 
+        static public node ParseBranch (node parent, List<Token> tokenList, string type) {
+            // Initialise base node
+            node baseNode = parent;
+              
+            node typeNode = new node() {body = "type", depth = baseNode.depth + 1};
+            baseNode.nodes.Add(typeNode);
+
+            node t = new node() {body = type, depth = typeNode.depth + 1};
+            typeNode.nodes.Add(t);
+
+            int i = 1;
+
+            node addNode;
+
+            if (type == "if" || type == "while" || type == "elseif") {
+                node conditionNode = new node() {body = "condition", depth = baseNode.depth + 1};
+                baseNode.nodes.Add(conditionNode);
+
+                List<Token> conditionTokens = new List<Token>();
+                Token tkn = tokenList[1];
+
+                while (tkn.value != "lbracket") {
+                    conditionTokens.Add(tkn);
+                    i++;
+                    tkn = tokenList[i];
+                }
+
+                Console.WriteLine(stringList(conditionTokens));
+
+                addNode = ParseExpression(conditionNode,conditionTokens);
+
+                if (addNode != null) 
+                    conditionNode.nodes[0].nodes.Add(addNode);
+            }
+        
+            node bodyNode = new node() {body = "body", depth = baseNode.depth + 1};
+            baseNode.nodes.Add(bodyNode);
+
+            List<Token> bodyTokens = tokenList.GetRange(i + 1,tokenList.Count - i - 2);
+            addNode = ParseGlobal(bodyNode,bodyTokens);
+
+            return baseNode;
+        }
+
+        static public node ParseGlobal (node branch, List<Token> tokensList) {
+            node newNode = branch;
+
+            List<Token> tokenBuffer = new List<Token>();
+
+            bool isBranch = false;
+            int branchDepth = 0;
+            string branchType = "";
+            bool prevWasIf = false;
+            bool prevWasLiteralIf = false;
+            node ifNode = null;
+
+            for (int i = 0; i < tokensList.Count; i++) {
+                Token token = tokensList[i];
+
+                if (token.value == "if" || token.value == "while" || token.value == "for" || token.value == "else" || token.value == "elseif") {
+                    branchDepth++;
+                    branchType = token.value;
+
+                    isBranch = true;
+                }else if (isBranch) {
+                    if (token.value == "rbracket") {
+                        branchDepth--;
+
+                        if (branchDepth == 0) {
+                            tokenBuffer.Add(token);
+
+                            node baseNode  = new node () {body = "branch", depth = newNode.depth + 1};
+
+                            if ((branchType == "else" || branchType == "elseif") && prevWasIf) { 
+                                
+                                if ((branchType == "elseif") && !prevWasLiteralIf) 
+                                    throw new SkryptStatementErrorException(branchType);
+
+                                node addNode  = new node () {body = "branch", depth = ifNode.depth + 1};
+                                ifNode.nodes.Add(addNode); 
+
+                                ParseBranch(addNode,tokenBuffer,branchType); 
+                                prevWasLiteralIf = false;
+                            }else if ((branchType == "else" || branchType == "elseif") && !prevWasLiteralIf) {                      
+                                throw new SkryptStatementErrorException(branchType);
+                            }else{
+                                baseNode.nodes.Add(ParseBranch(baseNode,tokenBuffer,branchType)); 
+                            }
+
+                            if (branchType == "if") {
+                                ifNode = baseNode;
+                                prevWasLiteralIf = true;
+                            }
+
+                            if (branchType == "if" || branchType == "elseif")   
+                                prevWasIf = true;
+
+                            tokenBuffer.Clear();
+                        }
+                    }
+                }else if (token.value == "eol") 
+                {
+                    node baseNode = new node () {body = "expression", depth = newNode.depth + 1};
+                    newNode.nodes.Add(baseNode);
+                    ParseExpression(baseNode,tokenBuffer);
+                    tokenBuffer.Clear();
+                    continue;
+                }
+
+                tokenBuffer.Add(token);
+            }
+
+            return newNode;
+        }
+
         static public node ParseTokens (List<Token> tokensList) 
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
 
             //opPrecedence.Add(new OperatorCategory(new string[] {"(",")","."}));
-            opPrecedence.Add(new OperatorCategory(new string[] {"!","~","--","++","V--","V++"}, true, 1));
+            opPrecedence.Add(new OperatorCategory(new string[] {"!","~","--","++"}, true, 1));
             opPrecedence.Add(new OperatorCategory(new string[] {"^"}));           
             opPrecedence.Add(new OperatorCategory(new string[] {"*","/","%"}));
             opPrecedence.Add(new OperatorCategory(new string[] {"-","+"}));
@@ -369,22 +487,8 @@ namespace Parsing
             opPrecedence.Reverse();
 
             node program = new node(){body = "program"};
-            List<Token> tokenBuffer = new List<Token>();
 
-            for (int i = 0; i < tokensList.Count; i++) {
-                Token token = tokensList[i];
-
-                if (token.value == "eol") 
-                {
-                    node baseNode = new node () {body = "expression", depth = program.depth + 1};
-                    program.nodes.Add(baseNode);
-                    ParseExpression(baseNode,tokenBuffer);
-                    tokenBuffer.Clear();
-                    continue;
-                }
-        
-                tokenBuffer.Add(token);
-            }
+            program = ParseGlobal(program, tokensList);
 
             watch.Stop();
 
