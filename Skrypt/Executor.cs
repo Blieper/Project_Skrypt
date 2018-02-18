@@ -24,10 +24,37 @@ namespace Execution {
     static public class Executor {
         static public List<Variable> Variables = new List<Variable>();
 
-        static public void ExecuteProgram (node Program, Variable[] scopedVars = null) {
+        static public void DeleteVariable (Variable var) {
+            if (Variables.Exists(x => x == var))
+                Variables.Remove(var);
+        }
+
+        static public void DeleteVariables (List<Variable> var) {
+
+            // Console.WriteLine("Global vars:");
+            // foreach (Variable v in Variables) {
+            //     Console.WriteLine(v.Identifier);
+            // } 
+
+            // Console.WriteLine("Scope vars:");
+            // foreach (Variable v in var) {
+            //     Console.WriteLine(v.Identifier);
+            // }   
+
+            for (int i = 0; i < var.Count; i++) {
+                if (Variables.Exists(x => x == var[i]))
+                    Variables.Remove(var[i]);
+            }
+        }
+
+        static public void ExecuteProgram (node Program, List<Variable> scopedVars = null) {
+
+            List<Variable> scope = new List<Variable>();
+ 
             if (scopedVars != null) {
-                for (int i = 0; i < scopedVars.Length; i++ ) {
+                for (int i = 0; i < scopedVars.Count; i++ ) {
                     Variables.Add(scopedVars[i]);
+                    scope.Add(scopedVars[i]);
                 }
             }
 
@@ -36,7 +63,7 @@ namespace Execution {
             foreach (node Node in Program.nodes) {
                 switch (Node.body) {
                     case "expression":
-                        Variable returnTest = ExecuteExpression(Node.nodes[0]);
+                        Variable returnTest = ExecuteExpression(Node.nodes[0], scope);
 
                         if (returnTest.Type == "return") {
                             returned = true;
@@ -44,7 +71,7 @@ namespace Execution {
                         }
                     break;
                     case "branch":
-                        ExecuteBranch(Node);
+                        ExecuteBranch(Node,scope);
                     break;
                     // case "methoddeclaration":
                     //     ExecuteMethodDeclaration(Node);
@@ -55,22 +82,15 @@ namespace Execution {
                     break;
             }
 
-            if (scopedVars != null) {
-                for (int i = 0; i < scopedVars.Length; i++ ) {
-                    DeleteVariable(scopedVars[i]);
-                }  
-            }
-        }
-
-        static public void DeleteVariable (Variable var) {
-            if (Variables.Exists(x => x == var))
-                Variables.Remove(var);
+            DeleteVariables(scope);
         }
 
         static Variable GetVariableWithType (node Expr) {
 
             object Value = null;
             string Type = "";
+
+            Console.WriteLine(Expr.body);
 
             switch (Expr.type) {
                 case TokenType.Boolean:
@@ -103,14 +123,17 @@ namespace Execution {
             return variable;
         }
 
-        static public Variable ExecuteExpression (node Expr) {
+        static public Variable ExecuteExpression (node Expr, List<Variable> scopeContext) {
             string body = Expr.body;
 
             if (Expr.body == "method") 
-                return ExecuteMethod(Expr.nodes[0]);
+                return ExecuteMethod(Expr.nodes[0], new List<Variable>());
 
-            if (Expr.body == "return" && Expr.nodes.Count == 0) 
-                return new Variable(string.Empty,"return");
+            if (Expr.body == "return") {
+                if (Expr.nodes.Count == 0) {
+                    return new Variable(string.Empty,"return");
+                }
+            }
 
             if (Expr.nodes.Count > 0) {
                 node Left = Expr.nodes[0];
@@ -121,8 +144,7 @@ namespace Execution {
                     Right = Expr.nodes[1];
 
                 if (Right != null) {
-                    
-                    Variable RightVar = ExecuteExpression(Right);                                    
+                    Variable RightVar = ExecuteExpression(Right, scopeContext);                                    
 
                     if (body == "assign") { 
                         Variable Var;
@@ -132,6 +154,7 @@ namespace Execution {
                         }else{
                             Var = new Variable(Left.body);
                             Variables.Add(Var);
+                            scopeContext.Add(Var);
                         }
 
                         if (Var.Type == "undefined" || (Var.Type == RightVar.Type)) {
@@ -142,7 +165,7 @@ namespace Execution {
                         return Var;
                     }
 
-                    Variable LeftVar  = ExecuteExpression(Left);
+                    Variable LeftVar  = ExecuteExpression(Left,scopeContext);
 
                     if (Left.type == TokenType.Identifier) {
                         if (!Variables.Exists(x => x.Identifier == Left.body)) {
@@ -369,7 +392,7 @@ namespace Execution {
                             }                                                                                        
                     }
                 }else{
-                    Variable variable = ExecuteExpression(Expr.nodes[0]);
+                    Variable variable = ExecuteExpression(Expr.nodes[0], scopeContext);
                     bool OnExistingVar = Variables.Exists(x => x.Identifier == Expr.nodes[0].body);
 
                     Variable ExistingVar = null; 
@@ -379,6 +402,7 @@ namespace Execution {
 
                     switch (body) {
                         case "return":
+
                             Variable found = Variables.Find(x => x.Type == "return");
 
                             int foundIndex = Variables.IndexOf(found);
@@ -386,9 +410,13 @@ namespace Execution {
                             if (variable != null) {
                                 Variables[foundIndex].Value = variable.Value;
                                 Variables[foundIndex].Type  = variable.Type;
+
+                                return variable;
                             }
                                                       
-                            return new Variable(string.Empty,"return");
+                            Variable rv = new Variable(string.Empty,"return");
+
+                            return rv;
                         case "not":
                             switch (variable.Type) {
                                 case "bool":
@@ -478,7 +506,7 @@ namespace Execution {
             return GetVariableWithType(Expr);
         }
         
-        static public Variable ExecuteMethod (node methodNode) {
+        static public Variable ExecuteMethod (node methodNode, List<Variable> scopeContext) {
             if (!MethodHandler.Exists(methodNode.body))
                 throw new SkryptMethodDoesNotExistException(methodNode.body);
 
@@ -488,7 +516,8 @@ namespace Execution {
             string type = methodNode.nodes[0].body;
             List<node> argNodes = null;
             object[] args = new object[0];
-
+            List<Variable> scopedVars = new List<Variable>();
+                
             if (method.arguments.Length > 0 && method.arguments != null) {
                 argNodes = methodNode.nodes[1].nodes;
                 args = new object[argNodes.Count];
@@ -497,7 +526,7 @@ namespace Execution {
 
                 foreach (node argNode in argNodes) {
                     node Expr = argNode.nodes[0];
-                    Variable solved = ExecuteExpression(Expr);
+                    Variable solved = ExecuteExpression(Expr, scopedVars);
                     
                     args[i] = solved.Value;
 
@@ -509,47 +538,49 @@ namespace Execution {
 
             if (method.predefined) {
                 returnVariable = method.Run(args);
-            }else{
-                Variable[] scopedVars = null;
-                
+            }else{               
                 if (argNodes != null) {
-                    scopedVars = new Variable[argNodes.Count];
-
                     int i = 0;
 
                     foreach (node argNode in argNodes) {                  
                         node Expr = argNode.nodes[0];
-                        Variable solved = ExecuteExpression(Expr);
+                        Variable solved = ExecuteExpression(Expr, scopedVars);
                         solved.Identifier = argNode.body;
 
-                        scopedVars[i] = solved;
-                        
+                        if (Variables.Exists(x => x.Identifier == argNode.body)) {
+                            Variables[Variables.IndexOf(Variables.Find(x => x.Identifier == argNode.body))].Value = solved.Value;
+                        }
+
+                        scopedVars.Add(solved);
+
                         i++;
                     }
                 }
 
-                returnVariable = skmethod.Run(scopedVars);
+                returnVariable = skmethod.Run(scopedVars);      
+                DeleteVariables(scopedVars);
+
             }
 
             return returnVariable;
         }
 
         static public Variable ExecuteMethodDeclaration (node methodNode) {
-            string type = methodNode.nodes[0].body;
-            string Identifier = methodNode.nodes[1].body;
-            string[] args = new string[methodNode.nodes[2].nodes.Count];
+            //string type = methodNode.nodes[0].body;
+            string Identifier = methodNode.nodes[0].body;
+            string[] args = new string[methodNode.nodes[1].nodes.Count];
 
             int i = 0;
 
-            foreach (node argNode in methodNode.nodes[2].nodes) {
+            foreach (node argNode in methodNode.nodes[1].nodes) {
                 args[i] = argNode.body;
                 i++;
             }
 
-            node body = methodNode.nodes[3];
+            node body = methodNode.nodes[2];
 
             if (!MethodHandler.Exists(Identifier)) {
-                MethodHandler.Add(Identifier, type, args, body);
+                MethodHandler.Add(Identifier, args, body);
             }else{
                 SkryptMethod found = MethodHandler.GetSk(Identifier);
 
@@ -563,22 +594,25 @@ namespace Execution {
             return returnVariable;
         }
 
-        static public void ExecuteBranch (node branchNode) {           
+        static public void ExecuteBranch (node branchNode, List<Variable> scopeContext) {           
             string type = branchNode.nodes[0].nodes[0].body;
+
+            List<Variable> scope = new List<Variable>();
 
             if (type == "elseif" || type == "if" || type == "while") {
                 node condition = branchNode.nodes[1].nodes[0];
                 node body = branchNode.nodes[2];
                 node secondary = branchNode.nodes.Count > 3 ? branchNode.nodes[3] : null;
 
-                Variable solvedCondition = ExecuteExpression(condition);
+                Variable solvedCondition = ExecuteExpression(condition, scopeContext);
+                scope.Add(solvedCondition);
 
                 if (solvedCondition.Type == "bool") {
                     if (Convert.ToBoolean(solvedCondition.Value) == true) {
-                        ExecuteProgram(body);
+                        ExecuteProgram(body, scope);
                     }else{
                         if (secondary != null) 
-                            ExecuteBranch(secondary);
+                            ExecuteBranch(secondary, scope);
                     }
                 }
 
@@ -587,6 +621,8 @@ namespace Execution {
 
                 ExecuteProgram(body);
             }
+
+            DeleteVariables(scope);
         }
 
         static public void Run (string Code, bool printAST = false, bool printTokens = false) {

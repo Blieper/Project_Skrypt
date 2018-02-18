@@ -7,7 +7,7 @@ namespace Skrypt
 {
     class Program
     {
-        static bool printTokens = true;
+        static bool printTokens = false;
         static bool printAST    = true;
 
         static void Main(string[] args)

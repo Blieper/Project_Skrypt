@@ -238,12 +238,24 @@ namespace Parsing
                     if (surroundedPar) {
                         expression = expression.GetRange(1,expression.Count - 2);
                         return ParseExpression (branch, expression);
-                    } 
+                    } else if (expressionIsMethod) {
 
-                    if (expressionIsMethod) {
-                        node addNode = ParseMethod (branch, expression, foundMethod);
-                        if (addNode != null && !gotSplit) 
-                            branch.nodes.Add(addNode);     
+                        node addNode = null;
+
+                        if (expression.Count > 2) {
+                            if (expression[0].type == TokenType.Identifier && 
+                            expression[1].value == "lpar" && 
+                            expression[expression.Count - 1].value == "rpar"
+                            ) 
+                            {
+                                addNode = ParseMethod (branch, expression, foundMethod);
+                        
+                                if (addNode != null && !gotSplit) {                        
+                                    branch.nodes.Add(addNode);     
+                                    return null; 
+                                }
+                            }
+                        }
 
                         return addNode;                        
                     }
@@ -279,7 +291,7 @@ namespace Parsing
 
                 switch (tkn.type) {
                     case TokenType.Numeric:
-                        Value = float.Parse(tkn.value);
+                        Value = double.Parse(tkn.value);
                     break;
                     case TokenType.String:
                         Value = tkn.value.Substring(1,tkn.value.Length - 2);
@@ -301,6 +313,8 @@ namespace Parsing
         }
 
         static public node ParseMethod (node branch, List<Token> expression, Method method) {
+            Console.WriteLine(stringList(expression));
+
             // Initialise base node
             node baseNode = new node () {body = "method", depth = branch.depth + 1};
 
@@ -348,6 +362,7 @@ namespace Parsing
                 argId = 0;
                 foreach (List<Token> expr in argumentExpressions) {
                     node addNode = ParseExpression(arguments.nodes[argId],expr);
+
                     if (addNode != null) 
                         arguments.nodes[argId].nodes.Add(addNode);
 
@@ -355,6 +370,7 @@ namespace Parsing
                 }
             }
 
+            Console.WriteLine(baseNode);
 
             return baseNode;
         }
@@ -408,17 +424,17 @@ namespace Parsing
              // Initialise base node
             node baseNode = new node() {body = "methoddeclaration", depth = branch.depth + 1};    
             
-            node typeNode = new node() {body = tkns[0].value, depth = baseNode.depth + 1};
-            baseNode.nodes.Add(typeNode);            
+            // node typeNode = new node() {body = tkns[0].value, depth = baseNode.depth + 1};
+            // baseNode.nodes.Add(typeNode);            
             
-            node identifierNode = new node() {body = tkns[1].value, depth = baseNode.depth + 1};
+            node identifierNode = new node() {body = tkns[0].value, depth = baseNode.depth + 1};
             baseNode.nodes.Add(identifierNode); 
-
-            node bodyNode = new node() {body = "body", depth = baseNode.depth + 1};
-            baseNode.nodes.Add(bodyNode); 
 
             argsNode.depth = baseNode.depth + 1;
             baseNode.nodes.Add(argsNode); 
+
+            node bodyNode = new node() {body = "body", depth = baseNode.depth + 1};
+            baseNode.nodes.Add(bodyNode); 
 
             ParseGlobal(bodyNode, body);
 
@@ -462,7 +478,7 @@ namespace Parsing
                 if (token.value == "rbracket")
                     bracketDepth--; 
 
-                if (token.value == "function") {
+                if (token.value == "def") {
                     isMethod = true;
                     continue;
                 } else if (isMethod) {
@@ -477,14 +493,13 @@ namespace Parsing
                         isMethodArgs = false;
                         hasMethodArgs = true;
 
-                        Console.WriteLine("Adding method " + tokenBuffer[1].value);
-                        MethodHandler.Add(tokenBuffer[1].value,String.Empty,new string[0],(node)null);
+                        MethodHandler.Add(tokenBuffer[0].value,new string[0],(node)null);
                          
-                        SkryptMethod found = MethodHandler.GetSk(tokenBuffer[1].value);
+                        SkryptMethod found = MethodHandler.GetSk(tokenBuffer[0].value);
 
                         int foundIndex = MethodContainer.SKmethods.IndexOf(found);
 
-                        MethodContainer.SKmethods[foundIndex].returnType = tokenBuffer[0].value;                       
+                        //MethodContainer.SKmethods[foundIndex].returnType = tokenBuffer[0].value;                       
                         argsNode = new node() {body = "arguments"};
 
                         int j = 0;
@@ -499,7 +514,7 @@ namespace Parsing
                             if (argTkn.value == "seperate") 
                                 continue;
 
-                            argsNode.nodes.Add(new node() {body = argTkn.value, depth = argsNode.depth + 1});
+                            argsNode.nodes.Add(new node() {body = argTkn.value, depth = argsNode.depth + 2});
                         }
 
  
