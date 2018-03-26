@@ -24,9 +24,9 @@ namespace MethodBuilding {
                 method = (MDelegate)m;
             }
 
-            public Method (string id, string rt, string[] args, object m) {
+            public Method (string id, string[] args, object m) {
                 identifier = id;
-                returnType = rt;
+                //returnType = rt;
 
                 arguments = args;
                 SetMethod(m);
@@ -49,20 +49,23 @@ namespace MethodBuilding {
                 methodNode = (node)m;
             }
 
-            public SkryptMethod (string id, string rt, string[] args, object m) : base(id, rt, args, m)  {
+            public SkryptMethod (string id, string[] args, object m) : base(id, args, m)  {
                 predefined = false;
                 identifier = id;
-                returnType = rt;
+                //returnType = rt;
 
                 arguments = args;
                 SetMethod(m);
             }
 
-            public Variable Run (params Variable[] input) {
-                Variable returnVariable = new Variable(string.Empty,"return");
-                Executor.Variables.Add(returnVariable);
+            public Variable Run (List<Variable> input) {
 
+                Variable returnVariable = new Variable("_" + identifier,"return");
+                Executor.Variables.Add(returnVariable);
+                
                 Executor.ExecuteProgram(methodNode, input);
+
+                Executor.DeleteVariables(input);
 
                 return returnVariable;
             }
@@ -85,25 +88,24 @@ namespace MethodBuilding {
                 return methods.Find(x => x.identifier == name);
             }
 
-            static public Method Add (string identifier, string returnType, string[] arguments, MDelegate function) {
+            static public Method Add (string identifier, string returntype, string[] arguments, MDelegate function) {
 
                 Method method = new Method(
                     identifier,
-                    returnType,
                     arguments, 
                     function
-                );
+                ){returnType = returntype};
 
                 methods.Add(method);
 
                 return method;
             }
 
-            static public Method Add (string identifier, string returnType, string[] arguments, node methodNode) {
+            static public Method Add (string identifier, string[] arguments, node methodNode) {
 
                 SkryptMethod method = new SkryptMethod(
                     identifier,
-                    returnType,
+                    //returnType,
                     arguments, 
                     methodNode
                 );
